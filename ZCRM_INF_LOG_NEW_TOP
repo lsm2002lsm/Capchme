@@ -1,0 +1,72 @@
+*&---------------------------------------------------------------------*
+*&  包含                ZCRM_INF_LOG_NEW_TOP
+*&---------------------------------------------------------------------*
+
+TYPES : BEGIN OF ty_out ,
+          zinfid    TYPE zcrm_t_log-zinfid,
+
+          zinf_t    TYPE char30,
+          zdirect_t TYPE char30,
+
+          objid     TYPE zcrm_t_log-objid,
+          zdate     TYPE zcrm_t_log-zdate,
+          ztime     TYPE zcrm_t_log-ztime,
+          ispgi     TYPE zcrm_t_log-ispgi,
+          msgtyp    TYPE zcrm_t_log-msgtyp,
+          msg       TYPE zcrm_t_log-msg,
+          icon      TYPE icon_d,
+          request   TYPE zcrm_t_log-request,
+          response  TYPE zcrm_t_log-response,
+        END OF ty_out .
+TYPES : ty_t_out TYPE TABLE OF ty_out .
+
+
+TYPES : BEGIN OF ty_log ,
+          zinfid TYPE zcrm_t_log-zinfid,
+          objid  TYPE zcrm_t_log-objid,
+          zdate  TYPE zcrm_t_log-zdate,
+          ztime  TYPE zcrm_t_log-ztime,
+          msgtyp TYPE zcrm_t_log-msgtyp,
+        END OF ty_log .
+
+
+
+DATA : gt_out TYPE ty_t_out,
+       gs_out TYPE ty_out.
+
+DATA : gs_log TYPE ty_log .
+
+
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE TEXT-t01.
+SELECT-OPTIONS : s_infid FOR gs_log-zinfid,
+                 s_objid FOR gs_log-objid ,
+                 s_zdate  FOR gs_log-zdate OBLIGATORY,
+                 s_ztime  FOR gs_log-ztime,
+                 s_msgtyp FOR gs_log-msgtyp .
+SELECTION-SCREEN END OF BLOCK b1.
+
+
+DATA : g_check TYPE c .
+
+DATA: ok_code TYPE sy-ucomm.
+DATA: go_container TYPE REF TO cl_gui_custom_container.
+DATA: go_dock TYPE REF TO cl_gui_docking_container.
+DATA: g_title TYPE sy-title .
+DATA: g_ucomm TYPE syucomm.
+
+DATA : go_split_mid   TYPE REF TO cl_gui_splitter_container .
+DATA : go_split_bot   TYPE REF TO cl_gui_splitter_container .
+
+DATA : go_cont_top       TYPE REF TO cl_gui_container,
+       go_cont_bot       TYPE REF TO cl_gui_container,
+       go_cont_bot_left  TYPE REF TO cl_gui_container,
+       go_cont_bot_right TYPE REF TO cl_gui_container.
+
+
+DATA : gt_fcat TYPE lvc_t_fcat.
+DATA : gs_vari TYPE disvariant,
+       gs_layo TYPE lvc_s_layo,
+       gt_excl TYPE ui_functions,
+       gt_sort TYPE lvc_t_sort.
+
+DATA : gr_alv TYPE REF TO cl_gui_alv_grid .
