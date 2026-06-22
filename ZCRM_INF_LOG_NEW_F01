@@ -1,0 +1,354 @@
+*&---------------------------------------------------------------------*
+*&  包含                ZCRM_INF_LOG_NEW_F01
+*&---------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*& Form frm_set_default_value
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_set_default_value .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_sscr_modify
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_sscr_modify .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_sscr_input_check
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_sscr_input_check .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_screen_check
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_screen_check .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_clear_data
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_clear_data .
+
+  REFRESH gt_out .
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_select_data
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_select_data .
+
+  SELECT
+    zinfid
+    objid
+    zdate
+    ztime
+    ispgi
+    msgtyp
+    msg
+    request
+    response
+    INTO CORRESPONDING FIELDS OF TABLE gt_out
+    FROM zcrm_t_log
+    WHERE zinfid IN s_infid
+    AND   objid IN s_objid
+    AND  zdate IN s_zdate
+    AND  ztime IN s_ztime
+    AND  msgtyp IN s_msgtyp .
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_process_data
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_process_data .
+
+  DATA : lv_idx TYPE sy-tabix .
+
+  DATA : lt_zfs_t001 TYPE TABLE OF zfs_t_001,
+         ls_zfs_t001 TYPE zfs_t_001.
+
+  DATA : lt_domain_zinfid TYPE TABLE OF dd07v,
+         ls_domain_zinfid TYPE dd07v.
+
+  DATA : lt_domain_direct TYPE TABLE OF dd07v,
+         ls_domain_direct TYPE dd07v.
+
+  SELECT * INTO TABLE lt_zfs_t001 FROM zfs_t_001 .
+  SORT lt_zfs_t001 BY zinfid .
+
+
+  SELECT * INTO TABLE lt_domain_zinfid FROM dd07v WHERE domname = 'ZDINFID' AND ddlanguage = '1' .
+  SELECT * INTO TABLE lt_domain_direct FROM dd07v WHERE domname = 'ZDDIRECT' AND ddlanguage = '1' .
+
+  LOOP AT gt_out INTO gs_out .
+    lv_idx = sy-tabix .
+
+    READ TABLE lt_zfs_t001 INTO ls_zfs_t001 WITH KEY zinfid = gs_out-zinfid BINARY SEARCH .
+    IF sy-subrc = 0 .
+      READ TABLE lt_domain_zinfid INTO ls_domain_zinfid WITH KEY domvalue_l = ls_zfs_t001-zinfid .
+      IF sy-subrc = 0 .
+        gs_out-zinf_t = ls_domain_zinfid-ddtext .
+      ENDIF .
+
+      READ TABLE lt_domain_direct INTO ls_domain_direct WITH KEY domvalue_l = ls_zfs_t001-direct.
+      IF sy-subrc = 0 .
+        gs_out-zdirect_t = ls_domain_direct-ddtext .
+      ENDIF .
+
+    ENDIF .
+
+
+    IF gs_out-msgtyp = 'E' .
+      gs_out-icon = icon_led_red .
+    ELSE .
+      gs_out-icon = icon_led_green .
+    ENDIF .
+
+    MODIFY gt_out FROM gs_out INDEX lv_idx .
+
+  ENDLOOP .
+
+
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_free_object
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_free_object .
+
+  IF gr_alv IS NOT INITIAL .
+    CALL METHOD gr_alv->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE gr_alv .
+  ENDIF .
+
+  IF go_cont_top IS NOT INITIAL .
+    CALL METHOD go_cont_top->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE go_cont_top .
+  ENDIF .
+
+  IF go_cont_bot_left IS NOT INITIAL .
+    CALL METHOD go_cont_bot_left->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE go_cont_bot_left .
+  ENDIF .
+
+
+  IF go_cont_bot_right IS NOT INITIAL .
+    CALL METHOD go_cont_bot_right->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE go_cont_bot_right .
+  ENDIF .
+
+
+
+
+  IF go_cont_bot IS NOT INITIAL .
+    CALL METHOD go_cont_bot->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE go_cont_bot .
+  ENDIF .
+
+
+  IF go_split_bot IS NOT INITIAL .
+    CALL METHOD go_split_bot->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE go_split_bot .
+  ENDIF .
+
+
+  IF go_split_mid IS NOT INITIAL .
+    CALL METHOD go_split_mid->free
+      EXCEPTIONS
+        cntl_error        = 1
+        cntl_system_error = 2
+        OTHERS            = 3.
+    FREE go_split_mid .
+  ENDIF .
+
+  IF go_dock IS NOT INITIAL .
+    CALL METHOD go_dock->free.
+    FREE go_dock .
+  ENDIF .
+
+
+ENDFORM.
+**&---------------------------------------------------------------------*
+**& Form frm_f4_infid_low
+**&---------------------------------------------------------------------*
+**& text
+**&---------------------------------------------------------------------*
+**& -->  p1        text
+**& <--  p2        text
+**&---------------------------------------------------------------------*
+*FORM frm_f4_infid_low .
+*
+*  DATA : BEGIN OF ls_infid_low ,
+*           infid  TYPE zbct0002-infid,
+*           inftxt TYPE zbct0002-inftxt,
+*         END OF ls_infid_low .
+*  DATA : lt_infid_low LIKE TABLE OF ls_infid_low .
+*
+*  REFRESH lt_infid_low .
+*  CLEAR ls_infid_low .
+*
+*
+*  SELECT infid inftxt INTO CORRESPONDING FIELDS OF TABLE lt_infid_low FROM zbct0002 .
+*  SORT lt_infid_low BY infid .
+*  DELETE ADJACENT DUPLICATES FROM lt_infid_low COMPARING infid .
+*
+*  CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+*    EXPORTING
+**     DDIC_STRUCTURE  = ' '
+*      retfield        = 'INFID'
+**     PVALKEY         = ' '
+*      dynpprog        = sy-repid
+*      dynpnr          = sy-dynnr
+*      dynprofield     = 'S_INFID-LOW'
+**     STEPL           = 0
+**     WINDOW_TITLE    =
+**     VALUE           = ' '
+*      value_org       = 'S'
+**     MULTIPLE_CHOICE = ' '
+**     DISPLAY         = ' '
+**     CALLBACK_PROGRAM       = ' '
+**     CALLBACK_FORM   = ' '
+**     CALLBACK_METHOD =
+**     MARK_TAB        =
+**   IMPORTING
+**     USER_RESET      =
+*    TABLES
+*      value_tab       = lt_infid_low
+**     FIELD_TAB       =
+**     RETURN_TAB      =
+**     DYNPFLD_MAPPING =
+*    EXCEPTIONS
+*      parameter_error = 1
+*      no_values_found = 2
+*      OTHERS          = 3.
+*  IF sy-subrc <> 0.
+** Implement suitable error handling here
+*  ENDIF.
+*
+*
+*ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_f4_infid_high
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+*FORM frm_f4_infid_high .
+*
+*  DATA : BEGIN OF ls_infid_high ,
+*           infid  TYPE zbct0002-infid,
+*           inftxt TYPE zbct0002-inftxt,
+*         END OF ls_infid_high .
+*  DATA : lt_infid_high LIKE TABLE OF ls_infid_high .
+*
+*  REFRESH lt_infid_high .
+*  CLEAR ls_infid_high .
+*
+*
+*  SELECT infid inftxt INTO CORRESPONDING FIELDS OF TABLE lt_infid_high FROM zbct0002 .
+*  SORT lt_infid_high BY infid .
+*  DELETE ADJACENT DUPLICATES FROM lt_infid_high COMPARING infid .
+*
+*  CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+*    EXPORTING
+**     DDIC_STRUCTURE  = ' '
+*      retfield        = 'INFID'
+**     PVALKEY         = ' '
+*      dynpprog        = sy-repid
+*      dynpnr          = sy-dynnr
+*      dynprofield     = 'S_INFID-HIGH'
+**     STEPL           = 0
+**     WINDOW_TITLE    =
+**     VALUE           = ' '
+*      value_org       = 'S'
+**     MULTIPLE_CHOICE = ' '
+**     DISPLAY         = ' '
+**     CALLBACK_PROGRAM       = ' '
+**     CALLBACK_FORM   = ' '
+**     CALLBACK_METHOD =
+**     MARK_TAB        =
+**   IMPORTING
+**     USER_RESET      =
+*    TABLES
+*      value_tab       = lt_infid_high
+**     FIELD_TAB       =
+**     RETURN_TAB      =
+**     DYNPFLD_MAPPING =
+*    EXCEPTIONS
+*      parameter_error = 1
+*      no_values_found = 2
+*      OTHERS          = 3.
+*  IF sy-subrc <> 0.
+** Implement suitable error handling here
+*  ENDIF.
+*
+*ENDFORM.
