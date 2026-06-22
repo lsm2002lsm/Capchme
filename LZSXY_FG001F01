@@ -1,0 +1,848 @@
+*----------------------------------------------------------------------*
+***INCLUDE LZSXY_FG001F01.
+*----------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  FRM_PROCESS_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_process_data USING p_dn TYPE likp-vbeln
+                            p_pgi TYPE char1
+                            p_upgi TYPE char1 .
+
+
+
+*TYPES : BEGIN OF ty_items ,
+*        END OF ty_items .
+*TYPES : ty_t_items TYPE TABLE OF ty_items WITH NON-UNIQUE DEFAULT KEY.
+
+*          t_item     TYPE ty_t_items,
+*        END OF ty_dn .
+
+  DATA : BEGIN OF ls_sernr ,
+           obknr   TYPE ser01-obknr,
+           lief_nr TYPE ser01-lief_nr,
+           posnr   TYPE ser01-posnr,
+
+           equnr   TYPE objk-equnr,
+           sernr   TYPE objk-sernr,
+           matnr   TYPE objk-matnr,
+         END OF ls_sernr .
+  DATA : lt_sernr LIKE TABLE OF ls_sernr .
+
+  DATA : ls_likp TYPE likp .
+  DATA : lt_lips TYPE STANDARD TABLE OF lips .
+  DATA : ls_lips TYPE lips .
+  DATA : ls_vbak TYPE vbak .
+  DATA : lv_salesorder TYPE vbak-vbeln .
+  DATA : ls_vbkd TYPE vbkd .
+  DATA : ls_vbpa TYPE vbpa .
+  DATA : ls_vbuk TYPE vbuk .
+  DATA : ls_item TYPE ty_items,
+         lt_item TYPE TABLE OF ty_items WITH NON-UNIQUE DEFAULT KEY.
+
+  DATA : lt_t173t TYPE STANDARD TABLE OF t173t,
+         ls_t173t TYPE t173t.
+
+  DATA : lt_zsdt00120 TYPE TABLE OF zsdt00120,
+         ls_zsdt00120 TYPE zsdt00120.
+
+
+  DATA : ls_kna1 TYPE kna1 .
+  DATA : ls_konv TYPE konv .
+  DATA : lt_konv TYPE TABLE OF konv .
+  DATA : ls_vbap TYPE vbap .
+  DATA : ls_vbup TYPE vbup .
+  DATA : lv_lfsta TYPE vbup-lfsta .
+  DATA : lv_lfimg TYPE lips-lfimg .
+  DATA : lv_auart TYPE vbak-auart .
+
+
+
+  SELECT SINGLE * INTO ls_likp FROM likp WHERE vbeln = p_dn .
+
+  SELECT SINGLE * INTO ls_vbuk FROM vbuk WHERE vbeln = p_dn .
+
+  SELECT * INTO TABLE lt_lips FROM lips WHERE vbeln = p_dn .
+
+  SELECT * INTO TABLE lt_zsdt00120  FROM zsdt00120 WHERE vbeln = p_dn .
+
+  DATA(lt_lips_tmp) = lt_lips .
+
+
+  READ TABLE lt_lips INTO DATA(ls_lips_tmp) INDEX 1 .
+  lv_salesorder = ls_lips_tmp-vgbel.
+
+  SELECT SINGLE * INTO ls_vbak FROM vbak WHERE vbeln = lv_salesorder .
+  SELECT SINGLE * INTO ls_vbkd FROM vbkd WHERE vbeln = lv_salesorder AND posnr = ''.
+  SELECT * INTO TABLE lt_konv FROM konv WHERE knumv = ls_vbak-knumv .
+
+
+
+
+  SELECT * INTO TABLE lt_t173t FROM t173t WHERE spras = '1' .
+  SORT lt_t173t BY vsart .
+
+
+
+  SELECT ser01~obknr
+         ser01~lief_nr
+         ser01~posnr
+         objk~equnr
+         objk~sernr
+         objk~matnr
+  INTO CORRESPONDING FIELDS OF TABLE lt_sernr
+  FROM ser01 INNER JOIN objk ON ser01~obknr = objk~obknr
+  WHERE ser01~lief_nr = p_dn .
+
+  SELECT SINGLE * INTO ls_vbpa FROM vbpa WHERE vbeln = p_dn AND parvw = 'WE' .
+  IF sy-subrc = 0 .
+    SELECT SINGLE * INTO ls_kna1 FROM kna1 WHERE kunnr = ls_vbpa-kunnr.
+  ENDIF .
+
+
+  gs_dn-vbeln = ls_likp-vbeln .
+  gs_dn-kdrq  = ls_likp-erdat+0(4) && '-' && ls_likp-erdat+4(2) && '-' && ls_likp-erdat+6(2) .
+
+  READ TABLE lt_t173t INTO ls_t173t WITH KEY vsart = ls_vbkd-vsart BINARY SEARCH .
+  IF sy-subrc = 0 .
+    gs_dn-ysfs = ls_t173t-bezei .
+  ENDIF .
+
+  gs_dn-bz = ls_vbkd-bstkd .
+  gs_dn-salesorder = lv_salesorder.
+  gs_dn-shdz = ls_kna1-ort02 .
+
+  gs_dn-zt = SWITCH #( ls_vbuk-wbstk WHEN '' THEN '0' WHEN 'A' THEN '1' WHEN 'B' THEN '2' WHEN 'C' THEN '3' ) .
+*  gs_dn-zt = ls_vbuk-wbstk .
+  gs_dn-bolnr = ls_likp-bolnr .
+
+
+  SORT lt_sernr BY lief_nr posnr .
+  SORT lt_zsdt00120 BY vbeln posnr .
+  SORT lt_konv BY kposn kschl .
+
+  LOOP AT lt_lips INTO ls_lips .
+    READ TABLE lt_sernr INTO ls_sernr WITH KEY lief_nr = ls_lips-vbeln posnr = ls_lips-posnr BINARY SEARCH .
+    IF sy-subrc = 0 .
+      LOOP AT lt_sernr INTO ls_sernr WHERE lief_nr = ls_lips-vbeln AND posnr = ls_lips-posnr .
+        ls_item-zzpos = ls_lips-posnr .
+        ls_item-posnr = ls_lips-posnr .
+        ls_item-matnr = ls_lips-matnr .
+        ls_item-menge = ls_lips-lfimg .
+
+***--拣配数量
+        SELECT SINGLE * INTO @DATA(ls_vbuk1) FROM vbuk WHERE vbeln = @p_dn .
+        IF ls_vbuk1-wbstk = 'B' OR ls_vbuk1-wbstk = 'C' .
+          ls_item-jpsl = ls_item-menge .
+        ELSE .
+          ls_item-jpsl = 0 .
+        ENDIF .
+
+*        IF p_pgi = 'X' .
+*          ls_item-jpsl = ls_item-menge .
+*        ENDIF .
+*        IF p_upgi = 'X' .
+*          ls_item-jpsl = 0 .
+*        ENDIF .
+
+        CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+          EXPORTING
+            input          = ls_lips-vrkme
+            language       = sy-langu
+          IMPORTING
+*           LONG_TEXT      =
+            output         = ls_item-dw
+*           SHORT_TEXT     =
+          EXCEPTIONS
+            unit_not_found = 1
+            OTHERS         = 2.
+
+        ls_item-zx = '  ' .
+        ls_item-charg = ls_lips-charg .
+        ls_item-sernr = ls_sernr-sernr .
+
+**---开票状态
+*        SELECT SINGLE fksta INTO ls_item-fksta FROM vbup WHERE vbeln = ls_lips-vbeln AND posnr = ls_lips-vbeln.
+        CLEAR ls_vbup .
+*        SELECT SINGLE * INTO ls_vbup FROM vbup WHERE vbeln = ls_lips-vbeln AND posnr = ls_lips-posnr.
+        SELECT SINGLE * INTO ls_vbup FROM vbup WHERE vbeln = lv_salesorder AND posnr = ls_lips-vgpos.
+*        ls_item-fksta = ls_vbup-fksta .
+*        IF ls_vbup-fksta = '' OR ls_vbup-fksta = 'A' .
+*          ls_item-kpzt = '未处理' .
+*        ELSEIF ls_vbup-fksta = 'B' .
+*          ls_item-kpzt = '处理中' .
+*        ELSEIF ls_vbup-fksta = 'C' .
+*          ls_item-kpzt = '已完成' .
+*        ENDIF .
+
+
+
+
+***---交货金额(含税)----参考ZSD010
+        CLEAR ls_vbap .
+        SELECT SINGLE * INTO ls_vbap FROM vbap WHERE  vbeln = lv_salesorder AND posnr = ls_lips-vgpos .
+
+        CLEAR: lv_auart ,lv_lfimg.
+        lv_auart = ls_vbak-auart.
+        IF ls_lips-uecha IS INITIAL .
+          LOOP AT lt_lips_tmp INTO DATA(lw_lips1) WHERE vbeln = ls_lips-vbeln AND uecha = ls_lips-posnr .
+            lv_lfimg = lv_lfimg + lw_lips1-lfimg.
+          ENDLOOP .
+        ELSE .
+          lv_lfimg = ls_lips-lfimg .
+        ENDIF .
+        IF lv_lfimg = 0 .  " 序列号没有批次拆分情况
+          lv_lfimg = ls_lips-lfimg .
+        ENDIF .
+
+        IF lv_auart = 'ZOR2' OR lv_auart = 'ZOR3' .
+          lv_lfimg = 0 - lv_lfimg .
+        ENDIF .
+
+***--批次拆分获取主行的JHJE
+        IF ls_lips-uecha IS NOT INITIAL .
+          SELECT SINGLE jhje INTO ls_lips-jhje FROM lips WHERE vbeln = ls_lips-vbeln AND posnr = ls_lips-uecha .
+        ENDIF .
+
+        IF ls_lips-jhje IS INITIAL .
+          IF ls_vbup-lfgsa = 'B'.
+            ls_item-zzje = ls_vbap-cmpre * lv_lfimg.
+          ELSE.
+            ls_item-zzje =  ls_vbap-netwr + ls_vbap-mwsbp.
+          ENDIF.
+
+        ELSE .
+          IF lv_auart EQ 'ZOR2' OR lv_auart EQ 'ZOR3'.
+            ls_item-zzje = 0 - ls_lips-jhje.
+          ELSE.
+            IF ls_vbup-lfgsa = 'B' OR ls_vbap-kwmeng NE lv_lfimg.
+              IF ls_lips-lfimg <> 0 .
+                ls_item-zzje = ls_vbap-cmpre * ls_lips-lfimg.
+              ELSE .
+                ls_item-zzje = ls_vbap-cmpre * lv_lfimg.
+              ENDIF .
+
+            ELSE.
+              ls_item-zzje =  ls_vbap-netwr + ls_vbap-mwsbp.
+            ENDIF.
+
+          ENDIF.
+
+        ENDIF .
+
+
+
+*        SELECT SINGLE * INTO ls_vbap FROM vbap WHERE vbeln = lv_salesorder AND posnr = ls_lips-vgpos .
+*        IF sy-subrc = 0 .
+*          ls_item-zzje = ls_vbap-netwr + ls_vbap-mwsbp .
+*        ENDIF .
+
+        READ TABLE lt_zsdt00120 INTO ls_zsdt00120 WITH KEY vbeln = p_dn
+                                                           posnr = ls_lips-posnr BINARY SEARCH .
+        IF sy-subrc = 0 .
+          ls_item-kddh = ls_zsdt00120-express_no .
+          ls_item-jsfph = ls_zsdt00120-tax_no .
+
+          CASE ls_zsdt00120-zkpzt.
+            WHEN '0' OR ''.
+              ls_item-kpzt = '未开' .
+            WHEN '1'.
+              ls_item-kpzt = '已开' .
+            WHEN '2'.
+              ls_item-kpzt = '部分开' .
+            WHEN OTHERS.
+          ENDCASE.
+        ENDIF .
+
+        ls_item-ref_doc  = ls_lips-vgbel .
+        ls_item-ref_item = ls_lips-vgpos .
+        ls_item-ref_type = 'C' .
+
+***************软件价格 硬件价格
+        READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                                kschl = 'ZPR1' BINARY SEARCH .
+        IF sy-subrc = 0 .
+          ls_item-zpr1 = ls_konv-kwert.
+        ENDIF .
+
+        READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                                kschl = 'ZPR2' BINARY SEARCH .
+        IF sy-subrc = 0 .
+          ls_item-zpr2 = ls_konv-kwert.
+        ENDIF .
+
+
+        READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                                  kschl = 'ZMW1' BINARY SEARCH .
+        IF sy-subrc = 0 .
+          ls_item-zmw1 = ls_konv-kwert.
+        ENDIF .
+
+        READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                              kschl = 'ZMW2' BINARY SEARCH .
+        IF sy-subrc = 0 .
+          ls_item-zmw2 = ls_konv-kwert.
+        ENDIF .
+
+
+***************
+
+        APPEND ls_item TO lt_item .
+        CLEAR ls_item .
+
+      ENDLOOP .
+
+    ELSE .
+
+      ls_item-zzpos = ls_lips-posnr .
+      ls_item-posnr = ls_lips-posnr .
+      ls_item-matnr = ls_lips-matnr .
+      ls_item-menge = ls_lips-lfimg .
+
+**--拣配数量
+      SELECT SINGLE * INTO @DATA(ls_vbuk2) FROM vbuk WHERE vbeln = @p_dn .
+      IF ls_vbuk2-wbstk = 'B' OR ls_vbuk2-wbstk = 'C' .
+        ls_item-jpsl = ls_item-menge .
+      ELSE .
+        ls_item-jpsl = 0 .
+      ENDIF .
+
+*      IF p_pgi = 'X' .
+*        ls_item-jpsl = ls_item-menge .
+*      ENDIF .
+*      IF p_upgi = 'X' .
+*        ls_item-jpsl = 0 .
+*      ENDIF .
+
+      CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+        EXPORTING
+          input          = ls_lips-vrkme
+          language       = sy-langu
+        IMPORTING
+*         LONG_TEXT      =
+          output         = ls_item-dw
+*         SHORT_TEXT     =
+        EXCEPTIONS
+          unit_not_found = 1
+          OTHERS         = 2.
+
+      ls_item-zx = '' .
+      ls_item-charg = ls_lips-charg  .
+      ls_item-sernr = '' .
+
+**---开票状态
+*        SELECT SINGLE fksta INTO ls_item-fksta FROM vbup WHERE vbeln = ls_lips-vbeln AND posnr = ls_lips-vbeln.
+      CLEAR ls_vbup .
+*      SELECT SINGLE * INTO ls_vbup FROM vbup WHERE vbeln = ls_lips-vbeln AND posnr = ls_lips-posnr.
+      SELECT SINGLE * INTO ls_vbup FROM vbup WHERE vbeln = lv_salesorder AND posnr = ls_lips-vgpos.
+*      ls_item-fksta = ls_vbup-fksta .
+*      IF ls_vbup-fksta = '' OR ls_vbup-fksta = 'A' .
+*        ls_item-kpzt = '未处理' .
+*      ELSEIF ls_vbup-fksta = 'B' .
+*        ls_item-kpzt = '处理中' .
+*      ELSEIF ls_vbup-fksta = 'C' .
+*        ls_item-kpzt = '已完成' .
+*      ENDIF .
+
+
+***---交货金额(含税)----参考ZSD010
+      CLEAR ls_vbap .
+      SELECT SINGLE * INTO ls_vbap FROM vbap WHERE  vbeln = lv_salesorder AND posnr = ls_lips-vgpos .
+
+      CLEAR: lv_auart ,lv_lfimg.
+      lv_auart = ls_vbak-auart.
+      IF ls_lips-uecha IS INITIAL .
+        LOOP AT lt_lips_tmp INTO DATA(lw_lips2) WHERE vbeln = ls_lips-vbeln AND uecha = ls_lips-posnr .
+          lv_lfimg = lv_lfimg + lw_lips2-lfimg.
+        ENDLOOP .
+      ELSE .
+        lv_lfimg = ls_lips-lfimg .
+      ENDIF .
+      IF lv_lfimg = 0 .  " Bug Fix 20260113
+        lv_lfimg = ls_lips-lfimg .
+      ENDIF .
+
+      IF lv_auart = 'ZOR2' OR lv_auart = 'ZOR3' .
+        lv_lfimg = 0 - lv_lfimg .
+      ENDIF .
+
+***--批次拆分获取主行的JHJE
+      IF ls_lips-uecha IS NOT INITIAL .
+        SELECT SINGLE jhje INTO ls_lips-jhje FROM lips WHERE vbeln = ls_lips-vbeln AND posnr = ls_lips-uecha .
+      ENDIF .
+
+      IF ls_lips-jhje IS INITIAL .
+        IF ls_vbup-lfgsa = 'B'.
+          ls_item-zzje = ls_vbap-cmpre * lv_lfimg.
+        ELSE.
+          ls_item-zzje =  ls_vbap-netwr + ls_vbap-mwsbp.
+        ENDIF.
+
+      ELSE .
+        IF lv_auart EQ 'ZOR2' OR lv_auart EQ 'ZOR3'.
+          ls_item-zzje = 0 - ls_lips-jhje.
+        ELSE.
+          IF ls_vbup-lfgsa = 'B' OR ls_vbap-kwmeng NE lv_lfimg.
+            IF ls_lips-lfimg <> 0 .
+              ls_item-zzje = ls_vbap-cmpre * ls_lips-lfimg.
+            ELSE .
+              ls_item-zzje = ls_vbap-cmpre * lv_lfimg.
+            ENDIF .
+          ELSE.
+            ls_item-zzje =  ls_vbap-netwr + ls_vbap-mwsbp.
+          ENDIF.
+
+        ENDIF.
+
+      ENDIF .
+
+
+
+*      SELECT SINGLE * INTO ls_vbap FROM vbap WHERE vbeln = lv_salesorder AND posnr = ls_lips-vgpos .
+*      IF sy-subrc = 0 .
+*        ls_item-zzje = ls_vbap-netwr + ls_vbap-mwsbp .
+*      ENDIF .
+
+      READ TABLE lt_zsdt00120 INTO ls_zsdt00120 WITH KEY vbeln = p_dn
+                                                           posnr = ls_lips-posnr BINARY SEARCH .
+      IF sy-subrc = 0 .
+        ls_item-kddh = ls_zsdt00120-express_no .
+        ls_item-jsfph = ls_zsdt00120-tax_no .
+
+        CASE ls_zsdt00120-zkpzt.
+          WHEN '0' OR ''.
+            ls_item-kpzt = '未开' .
+          WHEN '1'.
+            ls_item-kpzt = '已开' .
+          WHEN '2'.
+            ls_item-kpzt = '部分开' .
+          WHEN OTHERS.
+        ENDCASE.
+
+      ENDIF .
+
+      ls_item-ref_doc  = ls_lips-vgbel .
+      ls_item-ref_item = ls_lips-vgpos .
+      ls_item-ref_type = 'C' .
+
+***************软件价格 硬件价格 开票状态
+      READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                                kschl = 'ZPR1' BINARY SEARCH .
+      IF sy-subrc = 0 .
+        ls_item-zpr1 = ls_konv-kwert.
+      ENDIF .
+
+      READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                              kschl = 'ZPR2' BINARY SEARCH .
+      IF sy-subrc = 0 .
+        ls_item-zpr2 = ls_konv-kwert.
+      ENDIF .
+
+
+      READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                                kschl = 'ZMW1' BINARY SEARCH .
+      IF sy-subrc = 0 .
+        ls_item-zmw1 = ls_konv-kwert.
+      ENDIF .
+
+      READ TABLE lt_konv INTO ls_konv WITH KEY kposn = ls_lips-vgpos
+                                            kschl = 'ZMW2' BINARY SEARCH .
+      IF sy-subrc = 0 .
+        ls_item-zmw2 = ls_konv-kwert.
+      ENDIF .
+
+***************
+      APPEND ls_item TO lt_item .
+      CLEAR ls_item .
+
+    ENDIF .
+
+  ENDLOOP .
+
+
+  gs_dn-t_item = lt_item .
+
+
+
+
+
+***--已经PGI 带序列号
+*  IF lt_sernr[] IS NOT INITIAL .
+*
+*
+*  ELSE .
+
+*    LOOP AT lt_lips INTO ls_lips .
+*      ls_item-posnr = ls_lips-posnr .
+*      ls_item-matnr = ls_lips-matnr .
+*      ls_item-menge = ls_lips-lfimg .
+*
+*      CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+*        EXPORTING
+*          input          = ls_lips-vrkme
+*          language       = sy-langu
+*        IMPORTING
+**         LONG_TEXT      =
+*          output         = ls_item-dw
+**         SHORT_TEXT     =
+*        EXCEPTIONS
+*          unit_not_found = 1
+*          OTHERS         = 2.
+*
+*      ls_item-zx = '' .
+*      ls_item-charg = ls_lips-charg .
+*      ls_item-sernr = '' .
+*
+*
+*      SELECT SINGLE * INTO ls_konv FROM konv WHERE knumv = ls_vbak-knumv AND kposn = ls_lips-vgpos AND kschl = 'MWST' .
+*      IF sy-subrc = 0 .
+*        ls_item-zzje = ls_konv-kawrt + ls_konv-kwert . " 含税价格
+*      ENDIF .
+*
+*      APPEND ls_item TO lt_item .
+*      CLEAR ls_item .
+
+*    ENDLOOP .
+*
+*
+*  ENDIF .
+*
+*
+*  gs_dn-t_item = lt_item .
+
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SEND_TO_CRM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_send_to_crm USING p_dn TYPE  likp-vbeln
+                           ps_insert_conf TYPE zfs_t_001
+                           ps_del_conf TYPE zfs_t_001
+                     CHANGING p_msgtyp TYPE bapi_mtype
+                              p_msg TYPE bapi_msg
+                              p_request TYPE string
+                              p_response TYPE string .
+
+
+
+  DATA : lv_request_json TYPE string .
+
+  DATA name_mappings TYPE zcl_ui2_json=>name_mappings .
+
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'VBELN'   json = 'name')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'KDRQ'   json = 'KDRQ__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'YSFS'   json = 'YSFS__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'BZ'   json = 'BZ__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'SHDZ'   json = 'SHDZ__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'SALESORDER'   json = 'OrderName__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZT'   json = 'ZT__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'BOLNR'   json = 'BOLNR')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'T_ITEM'   json = 'details')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'POSNR'   json = 'SAPOrderLine__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'MATNR'   json = 'WLBM__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'MENGE'   json = 'SL__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'DW'   json = 'DW__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'SERNR'   json = 'SerialNumber__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'CHARG'   json = 'Batch__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZZJE'   json = 'ZJE__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZX'   json = 'ZX__c')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'KDDH'   json = 'KDDH')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'JSFPH'   json = 'JSFPH')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'JPSL'   json = 'JPSL')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'REF_DOC'   json = 'REF_DOC')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'REF_ITEM'   json = 'REF_ITEM')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'REF_TYPE'   json = 'REF_TYPE')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZPR1'   json = 'ZPR1')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZPR2'   json = 'ZPR2')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZMW1'   json = 'ZMW1')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'ZMW2'   json = 'ZMW2')      INTO TABLE name_mappings .
+  INSERT VALUE zcl_ui2_json=>name_mapping( abap = 'KPZT'   json = 'KPZT')      INTO TABLE name_mappings .
+
+
+
+  CALL METHOD zcl_ui2_json=>serialize
+    EXPORTING
+      data          = gs_dn
+      compress      = abap_true
+*     name          =
+*     pretty_name   = PRETTY_MODE-NONE
+*     type_descr    =
+*     assoc_arrays  = C_BOOL-FALSE
+*     ts_as_iso8601 = C_BOOL-FALSE
+*     expand_includes  = C_BOOL-TRUE
+*     assoc_arrays_opt = C_BOOL-FALSE
+*     numc_as_string   = C_BOOL-FALSE
+      name_mappings = name_mappings
+*     conversion_exits = C_BOOL-FALSE
+*     format_output = C_BOOL-FALSE
+*     hex_as_base64 = C_BOOL-TRUE
+    RECEIVING
+      r_json        = lv_request_json.
+
+
+  REPLACE ALL OCCURRENCES OF 'ZZPOS' IN lv_request_json WITH 'name'.
+
+
+
+****---删除DN
+  DATA: lo_http_client  TYPE REF TO if_http_client.
+  DATA : lv_header_name  TYPE string,
+         lv_header_value TYPE string.
+  DATA : lv_url TYPE string .
+  DATA : lv_request_body TYPE string .
+  DATA : lv_resp_json TYPE string.
+
+
+*  CLEAR : lv_header_name ,lv_header_value ,lv_url , lv_resp_json,lv_request_body,lv_resp_json,gs_resp.
+*
+*  lv_url = ps_del_conf-url.
+*  lv_header_name = ps_del_conf-tokenname .
+*  lv_header_value = ps_del_conf-tokenvalue .
+*
+*  lv_request_body = '{' && '"name":' && '"' && p_dn && '"' && '}' .
+*
+*  cl_http_client=>create_by_url(
+*             EXPORTING url    = lv_url
+*             IMPORTING client = lo_http_client ).
+*
+*  lo_http_client->request->set_header_field(
+*          EXPORTING
+*               name  = 'Content-Type'
+*               value = 'application/json' ).
+*
+*  lo_http_client->request->set_header_field(
+*          EXPORTING
+*               name  = lv_header_name
+*               value = lv_header_value ).
+*
+*  CALL METHOD lo_http_client->request->set_method( 'POST' ).
+*
+*  CALL METHOD lo_http_client->request->set_cdata
+*    EXPORTING
+*      data = lv_request_body.
+*
+*
+*  CALL METHOD lo_http_client->send
+*    EXCEPTIONS
+*      http_communication_failure = 1
+*      http_invalid_state         = 2.
+*
+*
+*  "receipt of http response
+*  CALL METHOD lo_http_client->receive
+*    EXCEPTIONS
+*      http_communication_failure = 1
+*      http_invalid_state         = 2
+*      http_processing_failed     = 3.
+*
+*  CASE  sy-subrc .
+*    WHEN 1.
+*      p_msgtyp = 'E' .
+*      p_msg = 'HTTP Error:' && 'http_communication_failure' .
+*      RETURN .
+*    WHEN 2.
+*      p_msgtyp = 'E' .
+*      p_msg = 'HTTP Error:' && 'http_invalid_state' .
+*      RETURN .
+*    WHEN 3.
+*      p_msgtyp = 'E' .
+*      p_msg = 'HTTP Error:' && 'http_processing_failed' .
+*      RETURN .
+*    WHEN OTHERS.
+*  ENDCASE.
+*
+*
+*  lv_resp_json = lo_http_client->response->get_cdata( ).
+*
+**DATA : lv_code   TYPE i,
+**       lv_reason TYPE string.
+**lo_http_client->response->get_status(
+**  IMPORTING
+**    code   = lv_code                  " HTTP Status Code
+**    reason = lv_respon                 " HTTP status description
+**).
+*
+*
+*  CALL METHOD zcl_ui2_json=>deserialize
+*    EXPORTING
+*      json = lv_resp_json
+**     PRETTY_NAME = ABAP_FALSE
+*    CHANGING
+*      data = gs_resp.
+*
+*
+*  CALL METHOD lo_http_client->close.
+
+
+
+
+
+
+***---新增
+
+  CLEAR : lv_header_name ,lv_header_value ,lv_url , lv_resp_json,lv_request_body,lv_resp_json,gs_resp.
+
+  lv_url = ps_insert_conf-url.
+  lv_header_name = ps_insert_conf-tokenname .
+  lv_header_value = ps_insert_conf-tokenvalue .
+
+  lv_request_body = lv_request_json .
+  p_request = lv_request_json .
+
+  cl_http_client=>create_by_url(
+             EXPORTING url    = lv_url
+             IMPORTING client = lo_http_client ).
+
+  lo_http_client->request->set_header_field(
+          EXPORTING
+               name  = 'Content-Type'
+               value = 'application/json' ).
+
+  lo_http_client->request->set_header_field(
+          EXPORTING
+               name  = lv_header_name
+               value = lv_header_value ).
+
+  CALL METHOD lo_http_client->request->set_method( 'POST' ).
+
+  CALL METHOD lo_http_client->request->set_cdata
+    EXPORTING
+      data = lv_request_body.
+
+
+  CALL METHOD lo_http_client->send
+    EXCEPTIONS
+      http_communication_failure = 1
+      http_invalid_state         = 2.
+
+
+  "receipt of http response
+  CALL METHOD lo_http_client->receive
+    EXCEPTIONS
+      http_communication_failure = 1
+      http_invalid_state         = 2
+      http_processing_failed     = 3.
+
+  CASE  sy-subrc .
+    WHEN 1.
+      p_msgtyp = 'E' .
+      p_msg = 'HTTP Error:' && 'http_communication_failure' .
+      RETURN .
+    WHEN 2.
+      p_msgtyp = 'E' .
+      p_msg = 'HTTP Error:' && 'http_invalid_state' .
+      RETURN .
+    WHEN 3.
+      p_msgtyp = 'E' .
+      p_msg = 'HTTP Error:' && 'http_processing_failed' .
+      RETURN .
+    WHEN OTHERS.
+  ENDCASE.
+
+
+  lv_resp_json = lo_http_client->response->get_cdata( ).
+  p_response = lv_resp_json .
+
+*DATA : lv_code   TYPE i,
+*       lv_reason TYPE string.
+*lo_http_client->response->get_status(
+*  IMPORTING
+*    code   = lv_code                  " HTTP Status Code
+*    reason = lv_respon                 " HTTP status description
+*).
+
+
+  CALL METHOD zcl_ui2_json=>deserialize
+    EXPORTING
+      json = lv_resp_json
+*     PRETTY_NAME = ABAP_FALSE
+    CHANGING
+      data = gs_resp.
+
+
+  CALL METHOD lo_http_client->close.
+
+
+  IF gs_resp-code = 200 .
+    p_msgtyp = 'S' .
+    p_msg = 'SUCCESS' .
+  ELSE .
+
+    p_msgtyp = 'E' .
+    p_msg = gs_resp-error .
+
+  ENDIF .
+
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_INSERT_LOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_I_DN  text
+*      -->P_I_PGI  text
+*      -->P_LV_MSGTYP  text
+*      -->P_LV_MSG  text
+*----------------------------------------------------------------------*
+FORM frm_insert_log  USING    p_dn TYPE likp-vbeln
+                              p_pgi TYPE char1
+                              p_msgtyp TYPE bapi_mtype
+                              p_msg TYPE bapi_msg
+                              p_request TYPE string
+                              p_response TYPE string .
+
+
+  DATA : ls_log     TYPE zcrm_t_log,
+         ls_log_his TYPE zcrm_t_log_his.
+
+
+  TRY .
+      DATA(lv_guid) = NEW cl_system_uuid( )->if_system_uuid~create_uuid_c32( ).
+    CATCH cx_uuid_error INTO DATA(lo_cx_uuid_error) .
+  ENDTRY.
+
+  ls_log_his-guid = lv_guid .
+  ls_log_his-zinfid = gv_infid .
+  ls_log_his-objid = p_dn .
+  ls_log_his-zdate = sy-datum .
+  ls_log_his-ztime = sy-uzeit .
+  ls_log_his-ispgi = p_pgi .
+  ls_log_his-msgtyp = p_msgtyp .
+  ls_log_his-msg = p_msg .
+  MODIFY zcrm_t_log_his FROM ls_log_his .
+
+
+
+  ls_log-zinfid = gv_infid .
+  ls_log-objid = p_dn .
+  ls_log-zdate = sy-datum .
+  ls_log-ztime = sy-uzeit .
+  ls_log-ispgi = p_pgi .
+  ls_log-msgtyp = p_msgtyp .
+  ls_log-msg = p_msg .
+  ls_log-request = p_request .
+  ls_log-response = p_response .
+  MODIFY zcrm_t_log FROM ls_log .
+
+
+*****----发送飞书
+  IF p_msgtyp = 'E' .
+    CALL FUNCTION 'ZSXY_FS001'
+      EXPORTING
+        im_infid = gv_infid
+        im_msg   = p_msg.
+  ENDIF .
+
+ENDFORM.
