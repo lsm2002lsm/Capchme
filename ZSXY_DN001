@@ -1,0 +1,92 @@
+FUNCTION zsxy_dn001.
+*"----------------------------------------------------------------------
+*"*"本地接口：
+*"  IMPORTING
+*"     VALUE(I_DN) TYPE  LIKP-VBELN
+*"     VALUE(I_PGI) TYPE  CHAR1 OPTIONAL
+*"     VALUE(I_UPGI) TYPE  CHAR1 OPTIONAL
+*"  EXPORTING
+*"     VALUE(EXP_MSGTYP) TYPE  BAPI_MTYPE
+*"     VALUE(EXP_MSG) TYPE  BAPI_MSG
+*"----------------------------------------------------------------------
+
+  DATA : ls_insert_conf_url TYPE zfs_t_001,
+         ls_del_conf_url    TYPE zfs_t_001.
+
+  DATA : ls_likp TYPE likp .
+  DATA : ls_vbuk TYPE vbuk .
+
+  DATA : lv_msg    TYPE bapi_msg,
+         lv_msgtyp TYPE bapi_mtype.
+
+
+  SELECT SINGLE * INTO ls_insert_conf_url FROM zfs_t_001 WHERE zinfid = 'I1' .
+  CHECK sy-subrc = 0 .
+
+  SELECT SINGLE * INTO ls_del_conf_url FROM zfs_t_001 WHERE zinfid = 'I2' .
+  CHECK sy-subrc = 0 .
+
+
+  CLEAR gs_dn .
+
+***---创建&更新 等待commit
+  DO 10 TIMES .
+    SELECT SINGLE * INTO ls_likp FROM likp WHERE vbeln = i_dn .
+    IF sy-subrc <> 0 .
+      WAIT UP TO 1 SECONDS .
+    ELSE .
+      EXIT .
+    ENDIF .
+  ENDDO .
+
+
+***---PGI
+  IF i_pgi =  'X' .
+    DO 10 TIMES .
+      SELECT SINGLE * INTO ls_vbuk FROM vbuk WHERE vbeln = i_dn AND ( wbstk = 'B' OR wbstk = 'C' ) .
+      IF sy-subrc <> 0 .
+        WAIT UP TO 1 SECONDS .
+      ELSE .
+        EXIT .
+      ENDIF .
+    ENDDO .
+  ENDIF .
+
+***---开票状态 等待DB更新完成
+*  IF i_billing = 'X' .
+*    WAIT UP TO '1.5' SECONDS .
+*  ENDIF.
+
+**--外围系统PGI修复
+  WAIT UP TO 1 SECONDS .
+
+  PERFORM frm_process_data USING i_dn
+                                 i_pgi
+                                 i_upgi .
+
+
+  DATA : lv_request  TYPE string,
+         lv_response TYPE string.
+
+  CLEAR: lv_request , lv_response .
+  PERFORM frm_send_to_crm USING i_dn
+                                ls_insert_conf_url
+                                ls_del_conf_url
+                         CHANGING lv_msgtyp
+                                  lv_msg
+                                  lv_request
+                                  lv_response .
+
+  exp_msgtyp = lv_msgtyp .
+  exp_msg = lv_msg .
+
+  PERFORM frm_insert_log USING i_dn
+                               i_pgi
+                               lv_msgtyp
+                               lv_msg
+                               lv_request
+                               lv_response .
+
+
+
+ENDFUNCTION.
