@@ -1,0 +1,318 @@
+*&---------------------------------------------------------------------*
+*&  包含文件              ZBC_INCL_F4
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_UPLOAD_DOWNLOAD_PATH
+*&---------------------------------------------------------------------*
+*       Returns the upload/download paths
+*----------------------------------------------------------------------*
+*      <--E_UPLOAD_PATH   text
+*      <--E_DOWN_PATH     text
+*----------------------------------------------------------------------*
+FORM frm_get_upload_download_path  CHANGING e_upload_path TYPE clike
+                                            e_down_path   TYPE clike.
+  DATA: l_upload_path TYPE string,
+        l_down_path   TYPE string.
+  CALL METHOD cl_gui_frontend_services=>get_upload_download_path
+    CHANGING
+      upload_path                 = l_upload_path
+      download_path               = l_down_path
+    EXCEPTIONS
+      cntl_error                  = 1
+      error_no_gui                = 2
+      not_supported_by_gui        = 3
+      gui_upload_download_path    = 4
+      upload_download_path_failed = 5
+      OTHERS                      = 6.
+  IF sy-subrc <> 0.
+    e_upload_path = l_upload_path.
+    e_down_path   = l_down_path.
+  ENDIF.
+ENDFORM.                    " FRM_GET_UPLOAD_DOWNLOAD_PATH
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_UPLOAD_PATH
+*&---------------------------------------------------------------------*
+*       Return the upload path
+*----------------------------------------------------------------------*
+*      <--E_UPLOAD_PATH  text
+*----------------------------------------------------------------------*
+FORM frm_get_upload_path  CHANGING e_upload_path TYPE clike.
+  DATA: l_down_path TYPE string.
+  PERFORM frm_get_upload_download_path CHANGING e_upload_path
+                                                l_down_path.
+ENDFORM.                    " FRM_GET_UPLOAD_PATH
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_DOWNLOAD_PATH
+*&---------------------------------------------------------------------*
+*       Return the download path
+*----------------------------------------------------------------------*
+*      <--E_DOWN_PATH  text
+*----------------------------------------------------------------------*
+FORM frm_get_download_path  CHANGING e_down_path TYPE clike.
+  DATA: l_upload_path TYPE string.
+  PERFORM frm_get_upload_download_path CHANGING l_upload_path
+                                                e_down_path.
+ENDFORM.                    " FRM_GET_DOWNLOAD_PATH
+*&---------------------------------------------------------------------*
+*&      Form  FRM_FILE_SAVE_DIALOG
+*&---------------------------------------------------------------------*
+*       Shows a File Save Dialog
+*       定义File Type Filter,最后一个为默认的显示,与DEFAULT_EXTENSION无关
+* 'All Files (*.*)|*.*|Excel Files (*.xls)|*.xls|Word files(*.doc)|*.doc'
+*----------------------------------------------------------------------*
+*      -->I_DEFAULT_FILE_NAME   Default File Name
+*      -->I_FILE_FILTER         File Type Filter
+*      -->I_OVERWRITE           Prompt Overwrite File
+*      <--E_FULLPATH            Path + File Name
+*----------------------------------------------------------------------*
+FORM frm_file_save_dialog
+       USING    i_window_title TYPE clike
+                i_default_file_name TYPE clike
+                i_file_filter TYPE clike
+                i_overwrite TYPE flag
+       CHANGING e_fullpath TYPE clike.
+
+  DATA: l_window_title      TYPE string,
+        l_default_file_name TYPE string,
+        l_file_filter       TYPE string,
+        l_filename          TYPE string,
+        l_path              TYPE string,
+        l_fullpath          TYPE string,
+        l_user_action       TYPE i.
+
+* Set values
+  l_window_title      = i_window_title.
+  l_default_file_name = i_default_file_name.
+  l_file_filter       = i_file_filter.
+
+* Show a File Save Dialog
+  CALL METHOD cl_gui_frontend_services=>file_save_dialog
+    EXPORTING
+      window_title         = l_window_title
+      default_extension    = space
+      default_file_name    = l_default_file_name
+      file_filter          = l_file_filter
+      initial_directory    = l_path
+      prompt_on_overwrite  = i_overwrite
+    CHANGING
+      filename             = l_filename
+      path                 = l_path
+      fullpath             = l_fullpath
+      user_action          = l_user_action
+    EXCEPTIONS
+      cntl_error           = 1
+      error_no_gui         = 2
+      not_supported_by_gui = 3
+      OTHERS               = 4.
+
+* Clear fullpath if cancel
+  IF l_user_action = cl_gui_frontend_services=>action_cancel.
+    CLEAR e_fullpath.
+  ELSE.
+    e_fullpath = l_fullpath.
+  ENDIF.
+ENDFORM.                    " FRM_FILE_SAVE_DIALOG
+*&---------------------------------------------------------------------*
+*&      Form  FRM_FILE_OPEN_DIALOG
+*&---------------------------------------------------------------------*
+*       Displays a File Open Dialog
+*       定义File Type Filter,最后一个为默认的显示,与DEFAULT_EXTENSION无关
+* 'All Files (*.*)|*.*|Excel Files (*.xls)|*.xls|Word files(*.doc)|*.doc'
+*----------------------------------------------------------------------*
+*      -->I_WINDOW_TITLE        Title Of File Open Dialog
+*      -->I_DEFAULT_FILE_NAME   Default File Name
+*      -->I_FILE_FILTER         File Type Filter
+*      -->I_MULTISELECTION      Multiple selections poss.
+*      <--E_FULLPATH            Path + File Name
+*----------------------------------------------------------------------*
+FORM frm_file_open_dialog
+       USING    i_window_title TYPE clike
+                i_default_file_name TYPE clike
+                i_file_filter TYPE clike
+*                I_MULTISELECTION TYPE FLAG
+       CHANGING e_fullpath TYPE clike.
+
+  DATA: l_window_title      TYPE string,
+        l_default_file_name TYPE string,
+        l_file_filter       TYPE string,
+        lt_filetable        TYPE filetable,
+        ls_filetable        TYPE file_table,
+        l_rc                TYPE i,
+        l_user_action       TYPE i.
+
+* Set values
+  l_window_title      = i_window_title.
+  l_default_file_name = i_default_file_name.
+  l_file_filter       = i_file_filter.
+
+* Displays a File Open Dialog
+  CALL METHOD cl_gui_frontend_services=>file_open_dialog
+    EXPORTING
+      window_title            = l_window_title
+      default_extension       = space
+      default_filename        = l_default_file_name
+      file_filter             = l_file_filter
+      with_encoding           = space
+      initial_directory       = space "
+      multiselection          = space "I_MULTISELECTION
+    CHANGING
+      file_table              = lt_filetable
+      rc                      = l_rc
+      user_action             = l_user_action
+*     FILE_ENCODING           =
+    EXCEPTIONS
+      file_open_dialog_failed = 1
+      cntl_error              = 2
+      error_no_gui            = 3
+      not_supported_by_gui    = 4
+      OTHERS                  = 5.
+* Clear fullpath if cancel
+  IF l_user_action = cl_gui_frontend_services=>action_cancel.
+    CLEAR e_fullpath.
+  ELSE.
+    READ TABLE lt_filetable INTO ls_filetable INDEX 1.
+    e_fullpath = ls_filetable-filename.
+  ENDIF.
+ENDFORM.                    " FRM_FILE_OPEN_DIALOG
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DIRECTORY_BROWSE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM frm_directory_browse USING    window_title    TYPE clike
+                                   initial_folder  TYPE clike
+                          CHANGING selected_folder TYPE clike.
+
+  DATA:l_window_title    TYPE string,
+       l_initial_folder  TYPE string,
+       l_selected_folder TYPE string.
+
+  MOVE:window_title TO l_window_title,
+       initial_folder TO l_initial_folder,
+       selected_folder TO l_selected_folder.
+
+  CALL METHOD cl_gui_frontend_services=>directory_browse
+    EXPORTING
+      window_title    = l_window_title
+      initial_folder  = l_initial_folder
+    CHANGING
+      selected_folder = l_selected_folder.
+
+  MOVE l_selected_folder TO selected_folder.
+ENDFORM.                    "FRM_DIRECTORY_BROWSE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_DIRFILELIST
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM frm_get_dirfilelist USING    p_file TYPE clike
+                         CHANGING file_table TYPE STANDARD TABLE.
+
+  DATA:l_directory        TYPE string,
+       l_filter           TYPE string VALUE '*.*',
+       l_files_only       TYPE abap_bool VALUE 'X',
+       l_directories_only TYPE abap_bool VALUE ' ',
+       count              TYPE i.
+
+  MOVE p_file TO l_directory.
+
+  CALL METHOD cl_gui_frontend_services=>directory_list_files
+    EXPORTING
+      directory        = l_directory                "STRING            Directory To Search
+      filter           = l_filter                   "STRING    '*.*'     File filter
+      files_only       = l_files_only               "ABAP_BOOL          Return only Files, no Directories
+      directories_only = l_directories_only         "ABAP_BOOL          Return only Directories, no Files
+    CHANGING
+      file_table       = file_table               "STANDARD TABLE    Return Table for the Found Files
+      count            = count.                     "I                  Number of Files/Dir Found
+
+ENDFORM.                    "FRM_GET_DIRFILELIST
+*&---------------------------------------------------------------------*
+*&      Form  FRM_FILE_EXIST
+*&---------------------------------------------------------------------*
+*       Checks if a File Exists
+*----------------------------------------------------------------------*
+*  -->  I_FILE    File to Check
+*----------------------------------------------------------------------*
+FORM frm_file_exist  USING i_file TYPE clike.
+
+  DATA: l_file   TYPE string,
+        l_result TYPE abap_bool.
+
+  l_file = i_file.
+
+  CALL METHOD cl_gui_frontend_services=>file_exist
+    EXPORTING
+      file                 = l_file
+    RECEIVING
+      result               = l_result
+    EXCEPTIONS
+      cntl_error           = 1
+      error_no_gui         = 2
+      wrong_parameter      = 3
+      not_supported_by_gui = 4
+      OTHERS               = 5.
+* Return
+  IF l_result IS INITIAL.
+    sy-subrc = 8.
+  ELSE.
+    sy-subrc = 0.
+  ENDIF.
+ENDFORM.                    "FRM_FILE_EXIST
+
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DOWNLOAD_TEMPLATE
+*&---------------------------------------------------------------------*
+*       下载模版
+*----------------------------------------------------------------------*
+*  -->  I_OBJID   模版对象名称
+*  -->  I_FILE    模版名称(全路径)
+*----------------------------------------------------------------------*
+FORM frm_download_template  USING i_objid TYPE clike
+                                  i_file  TYPE clike.
+
+* 判断模版文件是否存在
+  PERFORM frm_file_exist USING i_file.
+  IF sy-subrc = 0. "已存在
+    MESSAGE s398(00) WITH '模版' i_file '已存在' DISPLAY LIKE 'W'.
+    RETURN.
+  ENDIF.
+
+* 不存在,下载模版
+  DATA: ls_info TYPE wwwdatatab.
+  ls_info-relid = 'MI'.
+  ls_info-objid = i_objid.
+  PERFORM frm_download_web_object USING ls_info i_file.
+  IF sy-subrc = 0.
+    MESSAGE s398(00) WITH '模版下载成功,下载目录:' i_file.
+  ELSE.
+    MESSAGE e398(00) WITH '模版下载失败'.
+  ENDIF.
+ENDFORM.                    " download_template
+
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DOWNLOAD_WEB_OBJECT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->IS_INFO   text
+*      -->I_DESC    text
+*----------------------------------------------------------------------*
+FORM frm_download_web_object  USING is_info TYPE wwwdatatab
+                                    i_desc  TYPE clike.
+  DATA: l_desc TYPE rlgrap-filename,
+        l_rc   TYPE sy-subrc.
+
+  l_desc = i_desc.
+
+  CALL FUNCTION 'DOWNLOAD_WEB_OBJECT'
+    EXPORTING
+      key         = is_info
+      destination = l_desc
+    IMPORTING
+      rc          = l_rc.
+* Return
+  sy-subrc = l_rc.
+ENDFORM.                    " FRM_DOWNLOAD_WEB_OBJECT
