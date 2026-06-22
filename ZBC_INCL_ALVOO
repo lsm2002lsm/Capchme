@@ -1,0 +1,193 @@
+*&---------------------------------------------------------------------*
+*& Include ZBC_INCL_ALVOO
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SELECT_ALL_OO
+*&---------------------------------------------------------------------*
+*       全选(OO)
+*----------------------------------------------------------------------*
+* example:
+* perform frm_select_all_oo using gt_output 'CHKBOX'.
+*----------------------------------------------------------------------*
+FORM frm_select_all_oo USING it_table TYPE INDEX TABLE "表
+                             i_fname  TYPE lvc_fname. "checkbox字段名称
+
+  FIELD-SYMBOLS: <fs_line>. "行
+  FIELD-SYMBOLS: <f_box>.   "选择字段
+
+  LOOP AT it_table ASSIGNING <fs_line> .
+    ASSIGN COMPONENT i_fname OF STRUCTURE <fs_line> TO <f_box>.
+    <f_box> = 'X'.
+  ENDLOOP.
+ENDFORM.                    " FRM_SELECT_ALL_OO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DESELECT_ALL_OO
+*&---------------------------------------------------------------------*
+*       取消选择(OO)
+*----------------------------------------------------------------------*
+* example:
+* perform frm_deselect_all_oo using gt_output 'CHKBOX' is_selfield.
+*----------------------------------------------------------------------*
+FORM frm_deselect_all_oo USING it_table TYPE INDEX TABLE "表
+                               i_fname  TYPE lvc_fname. "checkbox字段名称
+  FIELD-SYMBOLS: <fs_line>. "行
+  FIELD-SYMBOLS: <f_box>.   "选择字段
+
+  LOOP AT it_table ASSIGNING <fs_line>.
+    ASSIGN COMPONENT i_fname OF STRUCTURE <fs_line> TO <f_box>.
+    <f_box> = ''.
+  ENDLOOP.
+ENDFORM.                    " FRM_DESELECT_ALL_OO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SELECT_CELL_OO
+*&---------------------------------------------------------------------*
+*       选择单元格(OO)
+*----------------------------------------------------------------------*
+*      -->IT_TABLE    text
+*      -->I_BFNAME    text
+*      -->I_CFNAME    text
+*----------------------------------------------------------------------*
+FORM frm_select_cell_oo USING it_table TYPE INDEX TABLE "表
+                              i_bfname TYPE lvc_fname  "checkbox字段名称
+                              i_cfname TYPE lvc_fname. "单元格样式字段名称
+
+  FIELD-SYMBOLS: <fs_line>, "行
+                 <f_box>.   "选择字段
+  FIELD-SYMBOLS: <ft_styl> TYPE lvc_t_styl.
+  DATA: ls_style TYPE lvc_s_styl.
+
+* 根据筛选项,确定行选择
+  LOOP AT it_table ASSIGNING <fs_line>.
+    ASSIGN COMPONENT i_bfname OF STRUCTURE <fs_line> TO <f_box>.
+    ASSIGN COMPONENT i_cfname OF STRUCTURE <fs_line> TO <ft_styl>.
+    READ TABLE <ft_styl> INTO ls_style WITH KEY fieldname = i_bfname.
+    IF sy-subrc EQ 0. "找得到样式, 如果不是不可编辑,选择
+      IF ls_style-style <> cl_gui_alv_grid=>mc_style_disabled.
+        <f_box> = 'X'.
+      ENDIF.
+    ELSE. "找不到样式,就是可编辑的
+      <f_box> = 'X'.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.                    " FRM_SELECT_CELL_OO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SELECT_UNFILTERED_OO
+*&---------------------------------------------------------------------*
+*       全选(OO已考虑筛选情况)
+*----------------------------------------------------------------------*
+* example:
+* perform frm_select_unfiltered_oo using gt_output 'CHKBOX' lr_alv.
+*----------------------------------------------------------------------*
+FORM frm_select_unfiltered_oo USING it_table TYPE INDEX TABLE "表
+                                    i_fname  TYPE lvc_fname "checkbox字段名称
+                                    ir_alv   TYPE REF TO cl_gui_alv_grid.
+
+  DATA: lt_entries TYPE lvc_t_fidx. "筛选的条目
+  FIELD-SYMBOLS: <fs_line>. "行
+  FIELD-SYMBOLS: <f_box>.   "选择字段
+
+* 获取被筛选的条目
+  IF ir_alv IS NOT INITIAL.
+    CALL METHOD ir_alv->get_filtered_entries
+      IMPORTING
+        et_filtered_entries = lt_entries.
+  ENDIF.
+
+* 根据筛选项,确定行选择
+  LOOP AT it_table ASSIGNING <fs_line>.
+    ASSIGN COMPONENT i_fname OF STRUCTURE <fs_line> TO <f_box>.
+    READ TABLE lt_entries TRANSPORTING NO FIELDS
+                          WITH TABLE KEY table_line = sy-tabix.
+    IF sy-subrc EQ 0. "被筛选
+      <f_box> = ''.
+    ELSE.
+      <f_box> = 'X'.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.                    " FRM_SELECT_UNFILTERED_OO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_UNFILTERED_CELL_OO
+*&---------------------------------------------------------------------*
+*       选择未筛选的单元格(OO)
+*----------------------------------------------------------------------*
+*      -->IT_TABLE  text
+*      -->I_BFNAME  text
+*      -->I_CFNAME  text
+*      -->IR_ALV    text
+*----------------------------------------------------------------------*
+FORM frm_unfiltered_cell_oo
+        USING it_table TYPE INDEX TABLE "表
+              i_bfname TYPE lvc_fname "checkbox字段名称
+              i_cfname TYPE lvc_fname "单元格样式字段名称
+              ir_alv   TYPE REF TO cl_gui_alv_grid.
+
+  DATA: lt_entries TYPE lvc_t_fidx. "筛选的条目
+  FIELD-SYMBOLS: <fs_line>, "行
+                 <f_box>.   "选择字段
+  FIELD-SYMBOLS: <ft_styl> TYPE lvc_t_styl.
+  DATA: ls_style TYPE lvc_s_styl.
+
+* 获取被筛选的条目
+  IF ir_alv IS NOT INITIAL.
+    CALL METHOD ir_alv->get_filtered_entries
+      IMPORTING
+        et_filtered_entries = lt_entries.
+  ENDIF.
+
+* 根据筛选项,确定行选择
+  LOOP AT it_table ASSIGNING <fs_line>.
+    ASSIGN COMPONENT i_bfname OF STRUCTURE <fs_line> TO <f_box>.
+    READ TABLE lt_entries TRANSPORTING NO FIELDS
+                          WITH TABLE KEY table_line = sy-tabix.
+    IF sy-subrc EQ 0. "被筛选
+      <f_box> = ''.
+    ELSE.
+      ASSIGN COMPONENT i_cfname OF STRUCTURE <fs_line> TO <ft_styl>.
+      READ TABLE <ft_styl> INTO ls_style WITH KEY fieldname = i_bfname.
+      IF sy-subrc EQ 0. "找得到样式, 如果不是不可编辑,选择
+        IF ls_style-style <> cl_gui_alv_grid=>mc_style_disabled.
+          <f_box> = 'X'.
+        ENDIF.
+      ELSE. "找不到样式,就是可编辑的
+        <f_box> = 'X'.
+      ENDIF.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.                    " FRM_UNFILTERED_CELL_OO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_FILTERED_ENTRIES_OO
+*&---------------------------------------------------------------------*
+*       取被筛选的条目
+*----------------------------------------------------------------------*
+*      -->  IR_ALV      text
+*      <--  ET_ENTRIES  text
+*----------------------------------------------------------------------*
+FORM frm_get_filtered_entries_oo
+        USING    ir_alv     TYPE REF TO cl_gui_alv_grid
+        CHANGING et_entries TYPE lvc_t_fidx.
+
+* 获取被筛选的条目
+  IF ir_alv IS NOT INITIAL.
+    CALL METHOD ir_alv->get_filtered_entries
+      IMPORTING
+        et_filtered_entries = et_entries.
+  ENDIF.
+ENDFORM.                    " FRM_GET_FILTERED_ENTRIES_OO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_SELECTED_CELLS_OO
+*&---------------------------------------------------------------------*
+*       取选中的单元格
+*----------------------------------------------------------------------*
+*      -->  IR_ALV    text
+*      <--  ET_CELL   text
+*----------------------------------------------------------------------*
+FORM frm_get_selected_cells_oo
+       USING    ir_alv  TYPE REF TO cl_gui_alv_grid
+       CHANGING et_cell TYPE lvc_t_cell.
+* 获取被筛选的条目
+  IF ir_alv IS NOT INITIAL.
+    CALL METHOD ir_alv->get_selected_cells
+      IMPORTING
+        et_cell = et_cell.
+  ENDIF.
+ENDFORM.                    " FRM_GET_SELECTED_CELLS_OO
