@@ -1,0 +1,59 @@
+*&---------------------------------------------------------------------*
+*& Report ZCRM_INF_LOG_NEW
+*&---------------------------------------------------------------------*
+*& Version Number    :  V1.0
+*& Project Name      :
+*& Created by        :  Simon Lu
+*& Created on        :  20231129
+*& Func Consultant   :  Simon
+*& Description       :
+*&---------------------------------------------------------------------*
+REPORT zcrm_inf_log_new.
+
+
+INCLUDE zbc_incl_alv.
+INCLUDE zbc_incl_alvevt .
+
+INCLUDE zcrm_inf_log_new_top .
+INCLUDE zcrm_inf_log_new_f01 .
+INCLUDE zcrm_inf_log_new_f02 .
+INCLUDE zcrm_inf_log_new_o01 .
+INCLUDE zcrm_inf_log_new_i01 .
+
+
+*&---------------------------------------------------------------------*
+*    INITIALIZATION
+*&---------------------------------------------------------------------*
+INITIALIZATION.
+  PERFORM frm_set_default_value.  "Set default value
+
+*&---------------------------------------------------------------------*
+*    AT SELECTION-SCREEN
+*&---------------------------------------------------------------------*
+AT SELECTION-SCREEN OUTPUT.
+  PERFORM frm_sscr_modify.       "Selection screen modify
+
+AT SELECTION-SCREEN.
+  PERFORM frm_sscr_input_check.  "Selection screen input check
+
+*AT SELECTION-SCREEN ON VALUE-REQUEST FOR s_infid-low .
+*  PERFORM frm_f4_infid_low .
+*
+*AT SELECTION-SCREEN ON VALUE-REQUEST FOR s_infid-high .
+*  PERFORM frm_f4_infid_high .
+
+*&---------------------------------------------------------------------*
+*    START-OF-SELECTION
+*&---------------------------------------------------------------------*
+START-OF-SELECTION .
+
+*  PERFORM frm_screen_check .
+*  CHECK g_check <> 'X' .
+  g_title = sy-title ."'销售易CRM发送接口Log' .
+  PERFORM frm_clear_data.   "Clear data
+  PERFORM frm_select_data.  "Get data
+  PERFORM frm_process_data .
+
+  PERFORM frm_free_object .
+
+  CALL SCREEN 9001 .
