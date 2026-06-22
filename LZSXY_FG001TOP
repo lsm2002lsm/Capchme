@@ -1,0 +1,53 @@
+FUNCTION-POOL zsxy_fg001.                   "MESSAGE-ID ..
+
+* INCLUDE LZSXY_FG001D...                    " Local class definition
+
+TYPES : BEGIN OF ty_items ,
+          zzpos    TYPE lips-posnr,
+          posnr    TYPE lips-posnr,  " 行
+          matnr    TYPE lips-matnr,  " 物料编码
+          menge    TYPE lips-lfimg,  " 数量
+          dw       TYPE c LENGTH 10, " 单位
+          sernr    TYPE objk-sernr,  " 序列号
+          charg    TYPE lips-charg,  " 批次
+          zzje     TYPE zezje,  " 含税总金额(行项目)
+          zx       TYPE c LENGTH 50 , " 备注
+          kddh     TYPE c LENGTH 35 , " 快递单号
+          jsfph    TYPE c LENGTH 35 , " 金税发票号
+          jpsl     TYPE lips-lfimg ,  " 拣配数量
+          ref_doc  TYPE lips-vgbel ,  " 参考原凭证
+          ref_item TYPE lips-vgpos,   " 参考原凭证行
+          ref_type TYPE char1 ,       " 参考原凭证类型
+          zpr1     TYPE konv-kwert ,  " 创优硬件价格
+          zpr2     TYPE konv-kwert ,  " 创优软件价格
+          zmw1     TYPE konv-kwert ,  " 硬件销项税
+          zmw2     TYPE konv-kwert ,  " 软件销项税
+*          fksta    TYPE vbup-fksta ,  " 开票状态
+          kpzt     TYPE c LENGTH 10 ,  " 开票状态
+        END OF ty_items .
+TYPES : ty_t_items TYPE TABLE OF ty_items WITH NON-UNIQUE DEFAULT KEY.
+
+TYPES : BEGIN OF ty_dn ,
+          vbeln      TYPE likp-vbeln,   " 交货单
+          kdrq       TYPE c LENGTH 15,  " 开单日期
+          ysfs       TYPE c LENGTH 30,  " 运输方式
+          bolnr      TYPE c LENGTH 35 , " 发货单备注
+          bz         TYPE c LENGTH 50,  " 备注
+          shdz       TYPE c LENGTH 50,  " 收货地址
+          salesorder TYPE vbak-vbeln,   " 销售订单
+          zt         TYPE i , "TYPE c LENGTH 10,  " 状态
+          t_item     TYPE ty_t_items,
+        END OF ty_dn .
+
+TYPES : BEGIN OF ty_resp ,
+          msg   TYPE c LENGTH 100,
+          code  TYPE i,
+          error TYPE c LENGTH 100,
+        END OF ty_resp .
+
+
+DATA : gs_dn TYPE ty_dn.
+
+DATA : gs_resp TYPE ty_resp .
+
+CONSTANTS : gv_infid TYPE zeinfid VALUE 'I1' .
