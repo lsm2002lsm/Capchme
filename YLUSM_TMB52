@@ -1,0 +1,216 @@
+*&---------------------------------------------------------------------*
+*& Report YLUSM_TMB52
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ylusm_tmb52.
+
+INCLUDE zbc_incl_runtime .
+
+
+PARAMETERS : p_date TYPE sy-datum .
+
+START-OF-SELECTION .
+
+  TYPES : BEGIN OF ty_mb52 ,
+            matnr           LIKE mara-matnr,
+            werks           LIKE t001w-werks,
+            lgort           LIKE mard-lgort,
+            sobkz           LIKE mkol-sobkz,
+            ssnum           LIKE  bickey-ssnum,             "n531604
+            pspnr           LIKE  mspr-pspnr,               "n531604
+            vbeln           LIKE  mska-vbeln,               "n531604
+            posnr           LIKE  mska-posnr,               "n531604
+            lifnr           LIKE mkol-lifnr,
+            kunnr           LIKE msku-kunnr,
+            kzbws           LIKE mssa-kzbws,
+            charg           LIKE mchb-charg,
+*        Additional data (texts, unit, ...)
+            maktx           LIKE marav-maktx,
+            bwkey           LIKE mbew-bwkey,
+            mtart           LIKE marav-mtart,
+            matkl           LIKE marav-matkl,
+            meins           LIKE marav-meins,
+            bwtty           LIKE marc-bwtty,
+            xchar           LIKE marc-xchar,
+            lgobe           LIKE t001l-lgobe,
+            bwtar           LIKE mcha-bwtar,
+            waers           LIKE t001-waers,
+            name1           LIKE t001w-name1,
+
+*        Quantities and currencies
+            labst           LIKE mard-labst,
+            wlabs           LIKE mbew-salk3,
+            insme           LIKE mard-insme,
+            winsm           LIKE mbew-salk3,
+            speme           LIKE mard-speme,
+            wspem           LIKE mbew-salk3,
+            einme           LIKE mard-einme,
+            weinm           LIKE mbew-salk3,
+            retme           LIKE mard-retme,
+            wretm           LIKE mbew-salk3,
+            umlme           LIKE mard-umlme,
+            wumlm           LIKE mbew-salk3,
+            glgmg           LIKE marc-glgmg,                "n912093
+            wglgm           LIKE mbew-salk3,                "n912093
+            trame           LIKE marc-trame,                "n912093
+            wtram           LIKE mbew-salk3,                "n912093
+            umlmc           LIKE marc-umlmc,                "n912093
+            wumlc           LIKE mbew-salk3,                "n912093
+*        Dummy field
+            dummy           TYPE  alv_dummy,
+*        Colour
+            farbe           TYPE slis_t_specialcol_alv,
+            lvorm           LIKE  mard-lvorm,
+*        valuated blocked GR stock                       "AC0K020254
+            bwesb           LIKE  marc-bwesb,               "AC0K020254
+            wbwesb          LIKE  mbew-salk3,               "AC0K020254
+            sgt_scat        LIKE  mchb-sgt_scat,
+*            /cwm/labst      LIKE mard-/cwm/labst,
+*            /cwm/insme      LIKE mard-/cwm/insme,
+*            /cwm/speme      LIKE mard-/cwm/speme,
+*            /cwm/einme      LIKE mard-/cwm/einme,
+*            /cwm/retme      LIKE mard-/cwm/retme,
+*            /cwm/umlme      LIKE mard-/cwm/umlme,
+**         /cwm/glgmg  LIKE marc-/cwm/glgmg,
+*            /cwm/trame      LIKE marc-/cwm/trame,
+*            /cwm/umlmc      LIKE marc-/cwm/umlmc,
+*            /cwm/bwesb      TYPE marc-/cwm/bwesb,
+** CWM
+*            /cwm/meins      LIKE mari-/cwm/meins,
+*            /cwm/valum      LIKE mari-/cwm/meins,
+*            /cwm/xcwmat     LIKE mara-/cwm/xcwmat,
+**        Dummy field
+*            /cwm/dummy      TYPE  alv_dummy,
+
+            owner           LIKE msis-owner,
+            lifnr2          LIKE mslb-lifnr,
+            fsh_season_year TYPE fsh_saisj,
+            fsh_season      TYPE fsh_saiso,
+            fsh_collection  TYPE fsh_collection,
+            fsh_theme       TYPE fsh_theme,
+            matnr_ext       TYPE materialid-matnr_ext,
+            zcharg_attr     TYPE char100,
+
+          END OF ty_mb52 .
+
+  TYPES : ty_t_mb52 TYPE TABLE OF ty_mb52 .
+
+  DATA : gt_mb52 TYPE ty_t_mb52,
+         gs_mb52 TYPE ty_mb52.
+
+
+  DATA: lt_seltab TYPE zbctt_rsparaml,
+        ls_seltab TYPE zbcs_rsparaml.
+
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'MATNR'.
+  ls_seltab-kind = 'S'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = 'IDR41'.
+  ls_seltab-high   = ''.
+  APPEND ls_seltab TO lt_seltab.
+
+
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'WERKS'.
+  ls_seltab-kind = 'S'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = '1000'.
+  ls_seltab-high   = ''.
+  APPEND ls_seltab TO lt_seltab.
+
+*  CLEAR ls_seltab.
+*  ls_seltab-selname = 'LGORT'.
+*  ls_seltab-kind = 'S'.
+*  ls_seltab-sign   = 'I'.
+*  ls_seltab-option = 'EQ'.
+*  ls_seltab-low    = ''.
+*  ls_seltab-high   = ''.
+*  APPEND ls_seltab TO lt_seltab.
+
+*  CLEAR ls_seltab.
+*  ls_seltab-selname = 'CHARG'.
+*  ls_seltab-kind = 'S'.
+*  ls_seltab-sign   = 'I'.
+*  ls_seltab-option = 'EQ'.
+*  ls_seltab-low    = ''.
+*  ls_seltab-high   = ''.
+*  APPEND ls_seltab TO lt_seltab.
+
+**--仅显示负库存
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'NEGATIV'.
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = ''.
+  APPEND ls_seltab TO lt_seltab.
+
+**--显示批次库存
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'XMCHB'.
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = ''.
+  APPEND ls_seltab TO lt_seltab.
+
+**--非零库存
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'NOZERO'.
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = 'X'.
+  APPEND ls_seltab TO lt_seltab.
+
+
+**--不显示值
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'NOVALUES'.
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = ''.
+  APPEND ls_seltab TO lt_seltab.
+
+
+
+**--层次表述
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'PA_HSQ'.
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = ''.
+  APPEND ls_seltab TO lt_seltab.
+
+**--非层次表述
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'PA_FLT'.
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = 'X'.
+  APPEND ls_seltab TO lt_seltab.
+
+
+  CLEAR ls_seltab.
+  ls_seltab-selname = 'PA_SOND'.  " 显示特殊库存
+  ls_seltab-kind = 'P'.
+  ls_seltab-sign   = 'I'.
+  ls_seltab-option = 'EQ'.
+  ls_seltab-low    = 'X'.
+  APPEND ls_seltab TO lt_seltab.
+
+
+
+  PERFORM frm_get_rep_result TABLES gt_mb52 USING 'RM07MLBS' lt_seltab.
+
+
+  LOOP AT gt_mb52 INTO gs_mb52 .
+
+  ENDLOOP .
