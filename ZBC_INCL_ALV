@@ -1,0 +1,418 @@
+*&---------------------------------------------------------------------*
+*& Include ZBC_INCL_ALV
+*&---------------------------------------------------------------------*
+INCLUDE zbc_incl_alvoo.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_ALV_INSTANCE
+*&---------------------------------------------------------------------*
+*       获取ALV实例
+*----------------------------------------------------------------------*
+* example:
+*  data: lr_alv type ref to cl_gui_alv_grid.
+** 获取ALV instance
+*  perform frm_get_alv_instance changing lr_alv.
+*----------------------------------------------------------------------*
+FORM frm_get_alv_instance CHANGING er_alv TYPE REF TO cl_gui_alv_grid .
+  CALL FUNCTION 'GET_GLOBALS_FROM_SLVC_FULLSCR'
+    IMPORTING
+      e_grid = er_alv.
+ENDFORM.                    " FRM_GET_ALV_INSTANCE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SELECT_ALL
+*&---------------------------------------------------------------------*
+*       全选
+*----------------------------------------------------------------------*
+* example:
+* perform frm_select_all using gt_output 'CHKBOX' is_selfield.
+*----------------------------------------------------------------------*
+FORM frm_select_all USING it_table TYPE INDEX TABLE "表
+                          i_fname  TYPE lvc_fname "checkbox字段名称
+                          is_selfield TYPE slis_selfield.
+* 全选(OO)
+  PERFORM frm_select_all_oo USING it_table i_fname.
+* 刷新显示
+  is_selfield-refresh = 'X'.
+  is_selfield-col_stable = 'X'.
+  is_selfield-row_stable = 'X'.
+ENDFORM.                    " FRM_SELECT_ALL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DESELECT_ALL
+*&---------------------------------------------------------------------*
+*       取消选择
+*----------------------------------------------------------------------*
+* example:
+* perform frm_deselect_all using gt_out 'CHBOX' is_selfield.
+*----------------------------------------------------------------------*
+FORM frm_deselect_all USING it_table TYPE INDEX TABLE "表
+                            i_fname  TYPE lvc_fname "checkbox字段名称
+                            is_selfield TYPE slis_selfield.
+* 全选(OO)
+  PERFORM frm_deselect_all_oo USING it_table i_fname.
+* 刷新显示
+  is_selfield-refresh = 'X'.
+  is_selfield-col_stable = 'X'.
+  is_selfield-row_stable = 'X'.
+ENDFORM.                    " FRM_DESELECT_ALL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SELECT_UNFILTERED
+*&---------------------------------------------------------------------*
+*       全选(已考虑筛选情况)
+*----------------------------------------------------------------------*
+* example:
+* perform frm_select_unfiltered using gt_out 'CHBOX' is_selfield.
+*----------------------------------------------------------------------*
+FORM frm_select_unfiltered USING it_table TYPE INDEX TABLE "表
+                                 i_fname  TYPE lvc_fname "checkbox字段名称
+                                 is_selfield TYPE slis_selfield.
+  DATA: lr_alv TYPE REF TO cl_gui_alv_grid.
+* 获取ALV instance
+  PERFORM frm_get_alv_instance CHANGING lr_alv.
+* 全选(OO已考虑筛选情况)
+  PERFORM frm_select_unfiltered_oo USING it_table i_fname lr_alv.
+* 刷新显示
+  is_selfield-refresh = 'X'.
+  is_selfield-col_stable = 'X'.
+  is_selfield-row_stable = 'X'.
+ENDFORM.                    " FRM_SELECT_UNFILTERED
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SELECT_CELL
+*&---------------------------------------------------------------------*
+*       选择单元格
+*----------------------------------------------------------------------*
+*      -->IT_TABLE  text
+*      -->I_BFNAME   text
+*      -->I_CFNAME   text
+*      -->IS_SELFIELD  text
+*----------------------------------------------------------------------*
+FORM frm_select_cell USING it_table TYPE INDEX TABLE "表
+                           i_bfname TYPE lvc_fname "checkbox字段名称
+                           i_cfname TYPE lvc_fname "单元格样式字段名称
+                           is_selfield TYPE slis_selfield.
+* 选择单元格(OO)
+  PERFORM frm_select_cell_oo USING it_table i_bfname i_cfname.
+* 刷新显示
+  is_selfield-refresh = 'X'.
+  is_selfield-col_stable = 'X'.
+  is_selfield-row_stable = 'X'.
+ENDFORM.                    " FRM_SELECT_CELL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_UNFILTERED_CELL
+*&---------------------------------------------------------------------*
+*       选择未筛选的单元格
+*----------------------------------------------------------------------*
+*      -->IT_TABLE  text
+*      -->I_BFNAME   text
+*      -->I_CFNAME   text
+*      -->IS_SELFIELD  text
+*----------------------------------------------------------------------*
+FORM frm_unfiltered_cell USING it_table TYPE INDEX TABLE "表
+                                i_bfname TYPE lvc_fname "checkbox字段名称
+                                i_cfname TYPE lvc_fname "单元格样式字段名称
+                                is_selfield TYPE slis_selfield.
+  DATA: lr_alv TYPE REF TO cl_gui_alv_grid.
+* 获取ALV instance
+  PERFORM frm_get_alv_instance CHANGING lr_alv.
+* 选择未筛选的单元格
+  PERFORM frm_unfiltered_cell_oo USING it_table i_bfname i_cfname lr_alv.
+* 刷新显示
+  is_selfield-refresh = 'X'.
+  is_selfield-col_stable = 'X'.
+  is_selfield-row_stable = 'X'.
+ENDFORM.                    " FRM_SELECT_UNFILTERED_CELL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DISABLED_CELL
+*&---------------------------------------------------------------------*
+*       单元格不可编辑
+*----------------------------------------------------------------------*
+*      -->I_FNAME   text
+*      -->IT_STYL  text
+*----------------------------------------------------------------------*
+FORM frm_disabled_cell USING i_fname TYPE lvc_fname
+                    CHANGING mt_styl TYPE lvc_t_styl.
+  DATA: ls_style TYPE lvc_s_styl.
+  ls_style-fieldname = i_fname.
+  ls_style-style = cl_gui_alv_grid=>mc_style_disabled.
+  INSERT ls_style INTO TABLE mt_styl.
+  CLEAR ls_style.
+ENDFORM.                    " FRM_DISABLED_CELL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_ENABLED_CELL
+*&---------------------------------------------------------------------*
+*       单元格可编辑
+*----------------------------------------------------------------------*
+*      -->I_FNAME   text
+*      -->IT_STYL  text
+*----------------------------------------------------------------------*
+FORM frm_enabled_cell USING i_fname TYPE lvc_fname
+                    CHANGING mt_styl TYPE lvc_t_styl.
+  DATA: ls_style TYPE lvc_s_styl.
+  ls_style-fieldname = i_fname.
+  ls_style-style = cl_gui_alv_grid=>mc_style_enabled.
+  INSERT ls_style INTO TABLE mt_styl.
+  CLEAR ls_style.
+ENDFORM.                    " FRM_DISABLED_CELL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_COLOR_CELL
+*&---------------------------------------------------------------------*
+*       单元格设置颜色
+*----------------------------------------------------------------------*
+*      -->I_FNAME   字段名称
+*      -->I_COL     颜色
+*      -->I_INT     强化
+*      -->I_INV     相反
+*      -->I_NOKEYC  覆盖码颜色
+*      -->MT_SCOL   颜色表
+*----------------------------------------------------------------------*
+FORM frm_color_cell USING    i_fname  TYPE lvc_fname
+                             i_col    TYPE lvc_col
+                             i_int    TYPE lvc_int
+                             i_inv    TYPE lvc_inv
+                             i_nokeyc TYPE lvc_nokeyc
+                    CHANGING mt_scol  TYPE lvc_t_scol.
+  DATA: ls_scol TYPE lvc_s_scol.
+  ls_scol-fname     = i_fname.
+  ls_scol-color-col = i_col.    "标准色代码 ( 1-7 )
+  ls_scol-color-int = i_int.    "背景颜色 反转颜色启用/关闭 1/0
+  ls_scol-color-inv = i_inv.    "前景字体 增强颜色启用/关闭 1/0
+  ls_scol-nokeycol  = i_nokeyc. "覆盖关键字颜色
+  APPEND ls_scol TO mt_scol.
+  CLEAR ls_scol.
+ENDFORM.                    " FRM_COLOR_CELL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CHECK_CHANGED_DATA
+*&---------------------------------------------------------------------*
+*       检查数据变化
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_check_changed_data .
+  DATA: lr_alv TYPE REF TO cl_gui_alv_grid.
+* 获取ALV instance
+  PERFORM frm_get_alv_instance CHANGING lr_alv.
+* 检查数据变化
+  IF lr_alv IS NOT INITIAL.
+    CALL METHOD lr_alv->check_changed_data.
+  ENDIF.
+ENDFORM.                    " FRM_CHECK_CHANGED_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_FILTERED_ENTRIES
+*&---------------------------------------------------------------------*
+*       取被筛选的条目
+*----------------------------------------------------------------------*
+*      <--ET_ENTRIES  text
+*----------------------------------------------------------------------*
+FORM frm_get_filtered_entries  CHANGING et_entries TYPE lvc_t_fidx.
+  DATA: lr_alv TYPE REF TO cl_gui_alv_grid.
+* 获取ALV instance
+  PERFORM frm_get_alv_instance CHANGING lr_alv.
+* 获取被筛选的条目
+  IF lr_alv IS NOT INITIAL.
+    CALL METHOD lr_alv->get_filtered_entries
+      IMPORTING
+        et_filtered_entries = et_entries.
+  ENDIF.
+ENDFORM.                    " FRM_GET_FILTERED_ENTRIES
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_SELECTED_CELLS
+*&---------------------------------------------------------------------*
+*       取选中的单元格
+*----------------------------------------------------------------------*
+*      <--ET_CELL  text
+*----------------------------------------------------------------------*
+FORM frm_get_selected_cells  CHANGING et_cell TYPE lvc_t_cell.
+  DATA: lr_alv TYPE REF TO cl_gui_alv_grid.
+* 获取ALV instance
+  PERFORM frm_get_alv_instance CHANGING lr_alv.
+* 获取被筛选的条目
+  IF lr_alv IS NOT INITIAL.
+    CALL METHOD lr_alv->get_selected_cells
+      IMPORTING
+        et_cell = et_cell.
+  ENDIF.
+ENDFORM.                    " FRM_GET_SELECTED_CELLS
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CHANGED_DATA_TO_TABLE
+*&---------------------------------------------------------------------*
+*       将修改的值保存到内表
+*----------------------------------------------------------------------*
+* example:
+*  PERFORM FRM_CHANGED_DATA_TO_TABLE USING ER_ACDP->MT_GOOD_CELLS
+*                                 CHANGING GT_OUT.
+*----------------------------------------------------------------------*
+FORM frm_changed_data_to_table  USING    it_modi TYPE lvc_t_modi "Modified Cells
+                                         it_fcat TYPE lvc_t_fcat "Field Catalog
+                                CHANGING mtab TYPE INDEX TABLE. "内表
+  DATA: ls_modi TYPE lvc_s_modi.
+  DATA: ls_fcat TYPE lvc_s_fcat.
+  DATA: l_func TYPE funcname.
+  FIELD-SYMBOLS: <fs_line>, "行
+                 <f_value>.   "选择字段
+
+* 将修改的值保存到内存
+  LOOP AT it_modi INTO ls_modi.
+    READ TABLE mtab ASSIGNING <fs_line> INDEX ls_modi-row_id.
+    CHECK sy-subrc EQ 0.
+    ASSIGN COMPONENT ls_modi-fieldname OF STRUCTURE <fs_line> TO <f_value>.
+    <f_value> = ls_modi-value.
+    "Convexit
+    READ TABLE it_fcat INTO ls_fcat WITH KEY fieldname = ls_modi-fieldname.
+    IF sy-subrc EQ 0 AND ls_fcat-convexit IS NOT INITIAL.
+      l_func = 'CONVERSION_EXIT_' && ls_fcat-convexit && '_INPUT'.
+      CALL FUNCTION 'FUNCTION_EXISTS'
+        EXPORTING
+          funcname = l_func.
+      IF sy-subrc EQ 0.
+        CALL FUNCTION l_func
+          EXPORTING
+            input  = <f_value>
+          IMPORTING
+            output = <f_value>.
+      ENDIF.
+    ENDIF.
+  ENDLOOP.
+ENDFORM.                    " FRM_CHANGED_DATA_TO_TABLE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_ALV_REFRESH_NO_SCROLL
+*&---------------------------------------------------------------------*
+*       ALV刷新,滚动条不动
+*----------------------------------------------------------------------*
+* example:
+*  PERFORM FRM_ALV_REFRESH_NO_SCROLL USING LR_ALV.
+*----------------------------------------------------------------------*
+FORM frm_alv_refresh_no_scroll
+       USING ir_alv TYPE REF TO cl_gui_alv_grid.
+
+*  DATA: LS_ROW_NO   TYPE LVC_S_ROID,
+*        LS_ROW_INFO TYPE LVC_S_ROW,
+*        LS_COL_INFO TYPE LVC_S_COL.
+*
+** 读取滚动条信息
+*  CALL METHOD IR_ALV->GET_SCROLL_INFO_VIA_ID
+*    IMPORTING
+*      ES_ROW_NO   = LS_ROW_NO
+*      ES_ROW_INFO = LS_ROW_INFO
+*      ES_COL_INFO = LS_COL_INFO.
+** 设置原滚动条物料
+*  IF LS_ROW_NO   IS NOT INITIAL AND
+*     LS_ROW_INFO IS NOT INITIAL AND
+*     LS_COL_INFO IS NOT INITIAL .
+** 刷新显示
+*    CALL METHOD IR_ALV->REFRESH_TABLE_DISPLAY.
+*    CALL METHOD IR_ALV->SET_SCROLL_INFO_VIA_ID
+*      EXPORTING
+*        IS_ROW_NO   = LS_ROW_NO
+*        IS_ROW_INFO = LS_ROW_INFO
+*        IS_COL_INFO = LS_COL_INFO.
+*  ENDIF.
+
+* Redisplay Table
+  DATA: ls_stable TYPE lvc_s_stbl VALUE 'XX'.
+  CALL METHOD ir_alv->refresh_table_display
+    EXPORTING
+      is_stable      = ls_stable
+      i_soft_refresh = 'X'
+    EXCEPTIONS
+      finished       = 1
+      OTHERS         = 2.
+ENDFORM.                    " FRM_CHANGED_DATA_TO_TABLE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_ALV_COL_OPTIMIZE
+*&---------------------------------------------------------------------*
+*       调整到最佳宽度
+*----------------------------------------------------------------------*
+* example:
+*  PERFORM FRM_ALV_COL_OPTIMIZE USING LR_ALV.
+*----------------------------------------------------------------------*
+FORM frm_alv_col_optimize  USING ir_alv TYPE REF TO cl_gui_alv_grid.
+  DATA: l_ucomm TYPE syucomm VALUE '&OPT'.
+  CALL METHOD ir_alv->set_function_code
+    CHANGING
+      c_ucomm = l_ucomm.
+ENDFORM.                    " FRM_ALV_COL_OPTIMIZE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_ALV_REFRESH_OPTIMIZE
+*&---------------------------------------------------------------------*
+*       ALV刷新并调整到最佳宽度
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_alv_refresh_optimize .
+  DATA: lr_alv TYPE REF TO cl_gui_alv_grid.
+* 获取ALV instance
+  PERFORM frm_get_alv_instance CHANGING lr_alv.
+* 刷新
+  PERFORM frm_alv_refresh_no_scroll USING lr_alv.
+* 调整到最佳宽度
+  PERFORM frm_alv_col_optimize USING lr_alv.
+ENDFORM.                    " FRM_ALV_REFRESH_OPTIMIZE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_COMPLETE_FCAT
+*&---------------------------------------------------------------------*
+*       Complete Field Catalog Table
+*----------------------------------------------------------------------*
+*      -->IS_ROW  Table Row
+*      <--T_FCAT  字段目录
+*----------------------------------------------------------------------*
+FORM frm_complete_fcat  USING    is_row TYPE data
+                        CHANGING t_fcat TYPE lvc_t_fcat.
+
+  DATA: lr_strds TYPE REF TO cl_abap_structdescr.
+  DATA: lr_datds TYPE REF TO cl_abap_datadescr.
+  DATA: lr_eleds TYPE REF TO cl_abap_elemdescr.
+
+  DATA: l_msg TYPE string.
+  FIELD-SYMBOLS: <fs_fcat> TYPE lvc_s_fcat.
+
+  lr_strds ?= cl_abap_typedescr=>describe_by_data( is_row ).
+
+  LOOP AT t_fcat ASSIGNING <fs_fcat>.
+    READ TABLE lr_strds->components TRANSPORTING NO FIELDS
+                                    WITH TABLE KEY name = <fs_fcat>-fieldname.
+    IF sy-subrc EQ 0.
+      CALL METHOD lr_strds->get_component_type
+        EXPORTING
+          p_name                 = <fs_fcat>-fieldname
+        RECEIVING
+          p_descr_ref            = lr_datds
+        EXCEPTIONS
+          component_not_found    = 1
+          unsupported_input_type = 2
+          OTHERS                 = 3.
+      IF sy-subrc <> 0.
+        MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+                   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ELSE.
+        lr_eleds ?= lr_datds.
+*        <FS_FCAT>-REF_FIELD = LR_ELEDS->HELP_ID.       "参考字段
+        <fs_fcat>-inttype   = lr_eleds->type_kind.     "内部类型
+        <fs_fcat>-decimals  = lr_eleds->decimals.      "小数位
+        "列宽度
+        IF <fs_fcat>-outputlen IS INITIAL.
+          <fs_fcat>-outputlen = lr_eleds->output_length.
+        ENDIF.
+        "转换例程
+        IF <fs_fcat>-ref_table IS INITIAL "参考表为空
+          AND lr_eleds->help_id IS NOT INITIAL. "数据元素不为空
+          SELECT SINGLE convexit
+            FROM dd04l
+            INTO <fs_fcat>-convexit
+           WHERE rollname = lr_eleds->help_id.
+        ENDIF.
+      ENDIF.
+      FREE lr_datds.
+      FREE lr_eleds.
+    ELSE.
+      IF l_msg IS INITIAL.
+        l_msg = <fs_fcat>-fieldname.
+      ELSE.
+        CONCATENATE l_msg '/' <fs_fcat>-fieldname INTO l_msg.
+      ENDIF.
+    ENDIF.
+  ENDLOOP.
+
+  IF l_msg IS NOT INITIAL.
+    MESSAGE i001(00) WITH '字段目录异常:' l_msg.
+  ENDIF.
+ENDFORM.                    " FRM_COMPLETE_FCAT
