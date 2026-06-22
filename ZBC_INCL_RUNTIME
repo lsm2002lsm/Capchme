@@ -1,0 +1,66 @@
+*&---------------------------------------------------------------------*
+*&  Include  ZBC_INCL_RUNTIME
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_REP_DATA
+*&---------------------------------------------------------------------*
+*       获取报表运行数据
+*----------------------------------------------------------------------*
+*      -->I_REPID    报表名称
+*      -->IT_SELTAB  选择参数表
+*      -->ER_DATA    返回结果
+*----------------------------------------------------------------------*
+FORM FRM_GET_REP_DATA  USING I_REPID   TYPE CLIKE
+                             IT_SELTAB TYPE ZBCTT_RSPARAML
+                             ER_DATA   TYPE REF TO DATA.
+
+* 参数设置
+  CALL METHOD CL_SALV_BS_RUNTIME_INFO=>SET
+    EXPORTING
+      DISPLAY  = ABAP_FALSE
+      METADATA = ABAP_FALSE
+      DATA     = ABAP_TRUE.
+
+* Submit
+  SUBMIT (I_REPID) WITH SELECTION-TABLE IT_SELTAB AND RETURN.
+
+  TRY.
+      CALL METHOD CL_SALV_BS_RUNTIME_INFO=>GET_DATA_REF
+        IMPORTING
+          R_DATA = ER_DATA.
+    CATCH CX_SALV_BS_SC_RUNTIME_INFO .
+      MESSAGE 'Unable to retrieve ALV data! Please try other conditions.' TYPE 'E'.
+  ENDTRY.
+
+  CALL METHOD CL_SALV_BS_RUNTIME_INFO=>CLEAR_ALL.
+ENDFORM.                    " FRM_GET_REP_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_REP_RESULT
+*&---------------------------------------------------------------------*
+*       获取报表运行结果(部分字段)
+*----------------------------------------------------------------------*
+*      -->T_RESULT    运行结果
+*      -->I_REPID     报表名称
+*      -->IT_SELTAB   选择参数表
+*----------------------------------------------------------------------*
+FORM FRM_GET_REP_RESULT  TABLES T_RESULT
+                          USING I_REPID   TYPE CLIKE
+                                IT_SELTAB TYPE ZBCTT_RSPARAML.
+  DATA: LR_DATA TYPE REF TO DATA.
+  FIELD-SYMBOLS: <LT_DATA> TYPE ANY TABLE.
+  FIELD-SYMBOLS: <LS_DATA>.
+
+* 获取报表运行数据
+  PERFORM FRM_GET_REP_DATA USING I_REPID IT_SELTAB LR_DATA.
+  ASSIGN LR_DATA->* TO <LT_DATA>.
+  CHECK SY-SUBRC EQ 0.
+
+* 返回指定字段
+  LOOP AT <LT_DATA> ASSIGNING <LS_DATA>.
+    MOVE-CORRESPONDING <LS_DATA> TO T_RESULT.
+    APPEND T_RESULT.
+    CLEAR T_RESULT.
+  ENDLOOP.
+ENDFORM.                    " FRM_GET_REP_RESULT
