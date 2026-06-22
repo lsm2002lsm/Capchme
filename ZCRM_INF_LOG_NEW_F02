@@ -1,0 +1,383 @@
+*&---------------------------------------------------------------------*
+*& Include          ZBC_LOGGING_F02
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*& Form frm_set_screen
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_set_screen .
+
+  DATA : lo_doc_left TYPE REF TO cl_dd_document .
+  DATA : lo_doc_right TYPE REF TO cl_dd_document .
+
+
+  CHECK go_dock IS INITIAL .
+
+  CREATE OBJECT go_dock
+    EXPORTING
+      dynnr     = sy-dynnr
+      repid     = sy-cprog
+      side      = 2          "SPLIT SCROLL BAR
+      extension = 2000.      "
+
+
+  CREATE OBJECT go_split_mid
+    EXPORTING
+      parent            = go_dock
+      rows              = 2
+      columns           = 1
+    EXCEPTIONS
+      cntl_error        = 1
+      cntl_system_error = 2
+      OTHERS            = 3.
+
+
+  CALL METHOD go_split_mid->get_container
+    EXPORTING
+      row       = 1
+      column    = 1
+    RECEIVING
+      container = go_cont_top.
+
+
+  CALL METHOD go_split_mid->get_container
+    EXPORTING
+      row       = 2
+      column    = 1
+    RECEIVING
+      container = go_cont_bot.
+
+
+
+  CREATE OBJECT go_split_bot
+    EXPORTING
+      parent            = go_cont_bot
+      rows              = 1
+      columns           = 2
+    EXCEPTIONS
+      cntl_error        = 1
+      cntl_system_error = 2
+      OTHERS            = 3.
+
+
+  CALL METHOD go_split_bot->get_container
+    EXPORTING
+      row       = 1
+      column    = 1
+    RECEIVING
+      container = go_cont_bot_left.
+
+
+*  CREATE OBJECT lo_doc_left
+*    EXPORTING
+*      no_margins = 'X'.
+*
+*  CALL METHOD lo_doc_left->add_text
+*    EXPORTING
+*      text      = 'Request'
+*      sap_style = cl_dd_area=>heading.
+*
+*  CALL METHOD lo_doc_left->display_document
+*    EXPORTING
+*      parent = go_cont_bot_left.
+
+
+
+
+
+  CALL METHOD go_split_bot->get_container
+    EXPORTING
+      row       = 1
+      column    = 2
+    RECEIVING
+      container = go_cont_bot_right.
+
+
+*  CREATE OBJECT lo_doc_right
+*    EXPORTING
+*      no_margins = 'X'.
+*
+*  CALL METHOD lo_doc_right->add_text
+*    EXPORTING
+*      text      = 'Response'
+*      sap_style = cl_dd_area=>heading.
+*
+*  CALL METHOD lo_doc_right->display_document
+*    EXPORTING
+*      parent = go_cont_bot_right.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_create_alv
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*& -->  p1        text
+*& <--  p2        text
+*&---------------------------------------------------------------------*
+FORM frm_create_alv .
+
+
+  CHECK gr_alv IS INITIAL .
+
+  CREATE OBJECT gr_alv
+    EXPORTING
+      i_parent = go_cont_top.
+
+
+  DATA : lr_hdl_all TYPE REF TO lcl_event_handler_all .
+
+  CREATE OBJECT lr_hdl_all.
+  SET HANDLER lr_hdl_all->toolbar                FOR gr_alv .
+  SET HANDLER lr_hdl_all->user_command           FOR gr_alv .
+  SET HANDLER lr_hdl_all->hotspot_click          FOR gr_alv .
+  SET HANDLER lr_hdl_all->double_click           FOR gr_alv .
+  SET HANDLER lr_hdl_all->before_user_command    FOR gr_alv .
+  SET HANDLER lr_hdl_all->after_user_command     FOR gr_alv .
+  SET HANDLER lr_hdl_all->data_changed           FOR gr_alv .
+  SET HANDLER lr_hdl_all->data_changed_finished  FOR gr_alv .
+  SET HANDLER lr_hdl_all->menu_button            FOR gr_alv .
+  SET HANDLER lr_hdl_all->button_click           FOR gr_alv .
+  SET HANDLER lr_hdl_all->after_refresh          FOR gr_alv .
+  SET HANDLER lr_hdl_all->onf4                   FOR gr_alv .
+  SET HANDLER lr_hdl_all->ondropcomplete         FOR gr_alv .
+
+
+  gs_vari-report = sy-repid.
+  gs_layo-cwidth_opt = 'X' .
+*  gs_layo-info_fname = 'COLOR' . " 颜色
+*  gs_layo-no_rowmark = 'X' .
+*  gs_layo-grid_title =  .
+
+  PERFORM frm_build_fcat USING gt_fcat .
+  PERFORM frm_build_sort USING gt_sort .
+
+
+  CALL METHOD gr_alv->set_table_for_first_display
+    EXPORTING
+      is_variant           = gs_vari
+      is_layout            = gs_layo
+      i_save               = 'A'
+      i_buffer_active      = space
+      i_bypassing_buffer   = space
+      it_toolbar_excluding = gt_excl
+    CHANGING
+      it_outtab            = gt_out
+      it_sort              = gt_sort
+      it_fieldcatalog      = gt_fcat.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_build_fcat
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> GT_FCAT
+*&---------------------------------------------------------------------*
+FORM frm_build_fcat  USING it_fcat TYPE lvc_t_fcat .
+
+  REFRESH it_fcat .
+
+  PERFORM frm_add_field USING:
+    it_fcat  'ICON'                '标识' ,
+    it_fcat  'MSG'                 '消息',
+
+    it_fcat  'ZINFID'                '接口编号',
+    it_fcat  'ZINF_T'                '接口描述',
+    it_fcat  'ZDIRECT_T'             '接口方向',
+    it_fcat  'OBJID'                 '对象编号',
+    it_fcat  'ZDATE'                 '日期',
+    it_fcat  'ZTIME'                 '时间',
+    it_fcat  'ISPGI'                 'PGI Flag'.
+
+*          zinf_t   TYPE char30,
+*          zdirect_t  TYPE char30,
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_add_field
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> IT_FCAT
+*&      --> P_
+*&      --> P_
+*&---------------------------------------------------------------------*
+FORM frm_add_field USING   it_fcat     TYPE lvc_t_fcat
+                             i_fieldname TYPE lvc_fname
+                             i_reptext   TYPE reptext .
+  "i_output    TYPE lvc_outlen .
+
+  DATA: ls_fcat TYPE lvc_s_fcat.
+*  LS_FCAT-TABNAME   = 'GT_OUT'.
+*  LS_FCAT-REF_TABLE = 'ZZQMT001'.
+  ls_fcat-fieldname = i_fieldname. "字段名称
+  ls_fcat-ref_field = i_fieldname. "字段名称
+  ls_fcat-reptext   = i_reptext.   "标题
+  ls_fcat-coltext   = i_reptext.   "列标题
+*  ls_fcat-outputlen = i_output .
+*  LS_FCAT-LZERO     = ''.          "输出前导零
+  ls_fcat-no_zero   = 'X'.          "隐藏零
+*  LS_FCAT-EMPHASIZE = 'C310'.      "列颜色
+*  LS_FCAT-CHECKBOX  = ''.          "作为复选框输出
+*  LS_FCAT-DECIMALS  = 0.           "小数位数
+* 特殊处理(仅改变显示样式,不应涉及逻辑)
+  CASE ls_fcat-fieldname.
+    WHEN 'CHBOX'.
+      ls_fcat-key  = 'X'.
+      ls_fcat-edit = 'X'.
+      ls_fcat-checkbox = 'X'.
+    WHEN 'ICON'.
+      ls_fcat-key = 'X'.
+      ls_fcat-icon = 'X' .
+    WHEN 'TABIX'.
+      ls_fcat-key  = 'X'.
+    WHEN OTHERS.
+  ENDCASE.
+
+* 添加
+  APPEND ls_fcat TO it_fcat.
+  CLEAR  ls_fcat.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*& Form frm_build_sort
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> GT_SORT
+*&---------------------------------------------------------------------*
+FORM frm_build_sort   USING it_sort TYPE lvc_t_sort .
+
+*  DATA : ls_sort TYPE lvc_s_sort .
+
+*  REFRESH it_sort .
+*  ls_sort-fieldname = 'OBJ' .
+*  ls_sort-up = 'X' .
+*  APPEND ls_sort TO it_sort .
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*& Form FRM_ALV_DOUBLE_CLICK_ALL
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> GT_SORT
+*&---------------------------------------------------------------------*
+FORM  frm_alv_double_click_all USING p_row TYPE lvc_s_row
+                                     p_column TYPE  lvc_s_col
+                                     p_row_no TYPE lvc_s_roid
+                                     sender TYPE REF TO cl_gui_alv_grid .
+
+*  CASE sender .
+*    WHEN gr_alv.
+
+  READ TABLE gt_out INTO DATA(ls_out) INDEX p_row-index .
+  CHECK sy-subrc = 0 .
+
+*  CASE ls_out-datatyp.
+*    WHEN 'XML'.
+*
+*      IF ls_out-request IS NOT INITIAL .
+*
+*        zcl_abap_browser_req=>show_xml(
+*          EXPORTING
+*            xml_string   = ls_out-request
+**        title        = 'Request'
+*            container    =  go_cont_bot_left
+*            check_xml    = abap_false
+*        ).
+*      ELSE .
+*        zcl_abap_browser_req=>close_browser( ).
+*      ENDIF .
+*
+*      IF ls_out-response IS NOT INITIAL .
+*        zcl_abap_browser_resp=>show_xml(
+*          EXPORTING
+*            xml_string   =  ls_out-response
+*            container    = go_cont_bot_right
+*            check_xml    = abap_false
+*        ).
+*      ELSE.
+*        zcl_abap_browser_resp=>close_browser( ).
+*      ENDIF .
+
+
+*    WHEN 'JSON'.
+
+  DATA:
+    "lv_json     TYPE string,
+    lv_convert  TYPE string,
+    "lo_json_ser TYPE REF TO cl_trex_json_serializer,
+    lv_err_text TYPE string.
+
+
+  IF ls_out-request IS NOT INITIAL .
+
+    TRY .
+        CALL TRANSFORMATION sjson2html SOURCE XML ls_out-request
+                                       RESULT XML DATA(lv_html1).
+
+        lv_convert = cl_abap_codepage=>convert_from( lv_html1 ) .
+        zcl_abap_browser_req=>show_html(
+          EXPORTING
+            html_string  =  lv_convert
+            check_html   = abap_false
+            container    = go_cont_bot_left
+        ).
+
+      CATCH cx_xslt_runtime_error INTO DATA(lo_err1).
+        lv_err_text = | Request: { lo_err1->get_text( ) } |.
+        MESSAGE lv_err_text TYPE 'S' DISPLAY LIKE 'E' .
+        RETURN.
+    ENDTRY .
+
+  ELSE .
+    zcl_abap_browser_req=>close_browser( ).
+  ENDIF .
+
+
+
+  IF ls_out-response IS NOT INITIAL .
+
+    TRY .
+        CALL TRANSFORMATION sjson2html SOURCE XML ls_out-response
+                                       RESULT XML DATA(lv_html2).
+
+        lv_convert = cl_abap_codepage=>convert_from( lv_html2 ) .
+        zcl_abap_browser_resp=>show_html(
+          EXPORTING
+            html_string  =  lv_convert
+            check_html   = abap_false
+            container    = go_cont_bot_right
+        ).
+
+      CATCH cx_xslt_runtime_error INTO DATA(lo_err2).
+        lv_err_text = | Response: { lo_err2->get_text( ) } |.
+        MESSAGE lv_err_text TYPE 'S' DISPLAY LIKE 'E' .
+        RETURN.
+    ENDTRY .
+
+  ELSE .
+    zcl_abap_browser_resp=>close_browser( ).
+  ENDIF .
+
+
+*    WHEN OTHERS.
+*  ENDCASE.
+
+
+
+
+
+
+
+ENDFORM .
