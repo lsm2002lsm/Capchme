@@ -1,0 +1,276 @@
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DISPLAY_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_display_data .
+
+* Variables for ALV
+  DATA: l_title TYPE lvc_title  "Title
+      , ls_vari TYPE disvariant "Variant
+      , ls_layo TYPE lvc_s_layo "Layout
+      , ls_glay TYPE lvc_s_glay "Grid settings
+      , lt_fcat TYPE lvc_t_fcat "Field Catalog Table
+      , lt_evts TYPE lvc_t_evts "Events Table
+      , lt_evts_exit TYPE slis_t_event_exit
+      .
+
+
+* Title
+  l_title = sy-title.
+
+* Layout
+  ls_layo-cwidth_opt = 'X'.
+  ls_layo-zebra      = 'X'.
+*  LS_LAYO-SMALLTITLE      = 'X'.
+*  LS_LAYO-BOX_FNAME      = 'CHBOX'.
+*  ls_layo-info_fname = 'COLOR' .
+
+* Field Catalog Table
+  PERFORM frm_build_fcat USING lt_fcat.
+
+
+* Show ALV
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY_LVC'
+    EXPORTING
+      i_callback_program       = sy-repid
+      i_callback_pf_status_set = 'FRM_PF_STATUS_SET'
+      i_callback_user_command  = 'FRM_USER_COMMAND'
+*     I_GRID_TITLE             = L_TITLE
+      i_save                   = 'A'
+      is_variant               = ls_vari
+      is_layout_lvc            = ls_layo
+      i_grid_settings          = ls_glay
+      it_fieldcat_lvc          = lt_fcat
+    TABLES
+      t_outtab                 = gt_out
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+
+
+
+ENDFORM.
+
+
+
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_BUILD_FCAT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_LT_FCAT  text
+*----------------------------------------------------------------------*
+FORM frm_build_fcat   USING it_fcat TYPE lvc_t_fcat.
+
+  PERFORM frm_add_field USING:
+     it_fcat  'VBELN'        ''  ''         '销售凭证'    ,
+     it_fcat  'ZPOS'         ''  ''         'Index'  ,
+     it_fcat  'KUNNR'         ''  ''         '售达方'  ,
+     it_fcat  'NAME1'         ''  ''         '售达方名称'  ,
+     it_fcat  'KUNNR_WE'         ''  ''       '送达方'  ,
+     it_fcat  'NAME_WE'         ''  ''         '送达方名称'  ,
+     it_fcat  'YWY'         ''  ''         '业务员'  ,
+     it_fcat  'ZJE'         ''  ''         '订单总金额'  ,
+     it_fcat  'ERDAT'         ''  ''         '订单下达日期'  ,
+     it_fcat  'KDRQ'         ''  ''         '开单日期'  ,
+     it_fcat  'BSTNK'         ''  ''         '订单备注'  ,
+     it_fcat  'BOLNR'         ''  ''         '快递单号'  ,
+     it_fcat  'POSNR'         ''  ''         '销售凭证项目'  ,
+     it_fcat  'SFMF'         ''  ''         '是否免费'  ,
+     it_fcat  'JHZT'         ''  ''         '交货状态'  ,
+     it_fcat  'MATNR'         ''  ''         '物料编号'  ,
+     it_fcat  'ARKTX'         ''  ''         '物料描述'  ,
+     it_fcat  'KWMENG'         ''  ''         '物料数量'  ,
+*     it_fcat  'ZDJ'         ''  ''           '物料单价金额'  ,
+*     it_fcat  'ZZJ'         ''  ''         '物料总价金额'  ,
+     it_fcat  'LGORT'         ''  ''         '发货仓库'  ,
+*     it_fcat  'SL'         ''  ''              '税率'  ,
+     it_fcat  'DELIVERY'         ''  ''         '交货单'  ,
+     it_fcat  'DELIVERYITEM'         ''  ''         '交货项目'  ,
+     it_fcat  'LFIMG'         ''  ''         '交货数量'  ,
+     it_fcat  'JHJE'         ''  ''         '已交货金额(含税)'  ,
+     it_fcat  'INVOICE'         ''  ''         '   形式发票'  ,
+     it_fcat  'INVOICEITEM'         ''  ''         '形式发票项目'  ,
+     it_fcat  'FPJE'         ''  ''         '形式发票金额'  ,
+
+  it_fcat  'BELNR'         ''  ''         '会计凭证'  ,
+  it_fcat  'DMBTR'         ''  ''         '会计凭证金额'  .
+
+
+
+
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_ADD_FIELD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_IT_FCAT  text
+*      -->P_0110   text
+*      -->P_0111   text
+*      -->P_0112   text
+*      -->P_0113   text
+*----------------------------------------------------------------------*
+FORM frm_add_field USING   it_fcat     TYPE lvc_t_fcat
+                             i_fieldname TYPE lvc_fname
+                             i_ref_tab  TYPE  lvc_rtname
+                             i_ref_field TYPE  lvc_rfname
+                             i_reptext   TYPE reptext .
+  "i_output    TYPE lvc_outlen .
+
+  DATA: ls_fcat TYPE lvc_s_fcat.
+*  LS_FCAT-TABNAME   = 'GT_OUT'.
+*  LS_FCAT-REF_TABLE = 'ZZQMT001'.
+  ls_fcat-fieldname = i_fieldname. "字段名称
+  ls_fcat-ref_table = i_ref_tab .
+  ls_fcat-ref_field = i_ref_field. "字段名称
+  ls_fcat-reptext   = i_reptext.   "标题
+  ls_fcat-coltext   = i_reptext.   "列标题
+*  ls_fcat-outputlen = i_output .
+*  LS_FCAT-LZERO     = ''.          "输出前导零
+*  ls_fcat-no_zero   = 'X'.          "隐藏零
+*  LS_FCAT-EMPHASIZE = 'C310'.      "列颜色
+*  LS_FCAT-CHECKBOX  = ''.          "作为复选框输出
+*  LS_FCAT-DECIMALS  = 0.           "小数位数
+* 特殊处理(仅改变显示样式,不应涉及逻辑)
+  CASE ls_fcat-fieldname.
+    WHEN 'CHBOX'.
+      ls_fcat-key  = 'X'.
+      ls_fcat-edit = 'X'.
+      ls_fcat-checkbox = 'X'.
+    WHEN 'ICON'.
+      ls_fcat-key = 'X'.
+      ls_fcat-icon = 'X' .
+    WHEN 'TABIX'.
+      ls_fcat-key  = 'X'.
+*    WHEN 'MEINS' .
+*      ls_fcat-edit_mask = '==CUNIT'.
+*    WHEN 'VBELN'  OR 'KUNNR' .
+*      ls_fcat-no_zero = 'X' .
+*
+*    WHEN 'MATNR' .
+*      ls_fcat-no_zero = 'X' .
+*      ls_fcat-ref_table = 'VBAP' .
+*      ls_fcat-ref_field = 'MATNR' .
+
+    WHEN OTHERS.
+  ENDCASE.
+
+* 添加
+  APPEND ls_fcat TO it_fcat.
+  CLEAR  ls_fcat.
+
+
+ENDFORM.
+
+
+*&---------------------------------------------------------------------*
+*& Form  FRM_PF_STATUS_SET
+*&---------------------------------------------------------------------*
+*&
+*&
+*&
+*&---------------------------------------------------------------------*
+FORM frm_pf_status_set USING et_excl TYPE slis_t_extab.
+* 设置工具栏
+*  APPEND CL_GUI_ALV_GRID=>MC_FC_LOC_CUT TO ET_EXCL.
+*  APPEND CL_GUI_ALV_GRID=>MC_FC_REFRESH TO ET_EXCL.
+*  IF g_send = 'X' OR gt_out IS INITIAL  OR p_back = 'X'.
+*    APPEND 'ZSEND' TO et_excl .
+*  ENDIF .
+  SET PF-STATUS 'PF_MAIN' EXCLUDING et_excl.
+** 设置标题栏
+*  IF r1 = 'X' .
+*    SET TITLEBAR 'T_POS'.
+*  ENDIF .
+*
+*  IF r2 = 'X' .
+*    SET TITLEBAR 'T_PRICE' .
+*  ENDIF .
+
+ENDFORM.                    "FRM_PF_STATUS_SET
+
+
+
+
+
+*&---------------------------------------------------------------------*
+*& Form  FRM_USER_COMMAND
+*&---------------------------------------------------------------------*
+*&
+*&
+*&
+*&---------------------------------------------------------------------*
+FORM frm_user_command USING i_ucomm     TYPE sy-ucomm
+                            is_selfield TYPE slis_selfield.
+
+*  DATA : ls_out TYPE ty_out .
+*  DATA : lv_idx TYPE sy-tabix .
+*
+*  DATA: lr_grid TYPE REF TO cl_gui_alv_grid.
+*  DATA : ls_stable TYPE lvc_s_stbl.
+*  FIELD-SYMBOLS : <fs_out> TYPE ty_out2 .
+*
+*
+*  CALL FUNCTION 'GET_GLOBALS_FROM_SLVC_FULLSCR'
+*    IMPORTING
+*      e_grid = lr_grid.
+*  CALL METHOD lr_grid->check_changed_data.
+*
+*  ls_stable-row = 'X'.
+*  ls_stable-col = 'X'.
+*
+*** 1. 处理
+*  CASE i_ucomm.
+*    WHEN '&IC1' .
+*      IF is_selfield-fieldname = 'ICON' .
+*        READ TABLE gt_out2 INTO ls_out2 INDEX is_selfield-tabindex.
+*        IF sy-subrc = 0 .
+*          IF ls_out2-icon = icon_wd_iframe .
+*            ls_out2-icon = icon_checkbox .
+*          ELSEIF ls_out2-icon = icon_checkbox .
+*            ls_out2-icon = icon_wd_iframe .
+*          ENDIF .
+*          MODIFY gt_out2 FROM ls_out2 INDEX is_selfield-tabindex.
+*        ENDIF .
+*      ENDIF .
+*
+*
+*    WHEN OTHERS .
+*  ENDCASE .
+*
+*
+*  CALL METHOD lr_grid->refresh_table_display
+*    EXPORTING
+*      is_stable = ls_stable
+*    EXCEPTIONS
+*      finished  = 1
+*      OTHERS    = 2.
+*  IF sy-subrc <> 0. ENDIF.
+*
+*  PERFORM frm_alv_col_optimize USING lr_grid .
+
+ENDFORM.                    "FRM_USER_COMMAND
+
+
+*&---------------------------------------------------------------------*
+*& Form frm_alv_col_optimize
+*&---------------------------------------------------------------------*
+*& text
+*&---------------------------------------------------------------------*
+*&      --> LR_GRID
+*&---------------------------------------------------------------------*
+FORM frm_alv_col_optimize  USING ir_alv TYPE REF TO cl_gui_alv_grid.
+  DATA: l_ucomm TYPE syucomm VALUE '&OPT'.
+  CALL METHOD ir_alv->set_function_code
+    CHANGING
+      c_ucomm = l_ucomm.
+ENDFORM.
