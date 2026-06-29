@@ -1,0 +1,82 @@
+*&---------------------------------------------------------------------*
+*&  包含文件              ZBC_INCL_BDC
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*    Data Description
+*&---------------------------------------------------------------------*
+* Variables for ALV
+  DATA: GS_BDCPARAMS TYPE CTU_PARAMS.     "BDC参数
+  DATA: GT_BDCDATA   TYPE TAB_BDCDATA.    "BDC数据
+  DATA: GT_BDCMSG    TYPE TAB_BDCMSGCOLL. "BDC消息
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_BDC_INIT
+*&---------------------------------------------------------------------*
+*       BDC初始化
+*----------------------------------------------------------------------*
+  FORM FRM_BDC_INIT.
+* 清空缓存
+    CLEAR GS_BDCPARAMS.
+
+    GS_BDCPARAMS-DISMODE  = 'N'. " 处理方式(A：显示所有屏幕 E：显示错误 N：后台的处理 P：Background processing; debugging possible)
+    GS_BDCPARAMS-UPDMODE  = 'L'. " 更新模式(L：本地的 S：同步 A：异步的)
+    GS_BDCPARAMS-CATTMODE = ' '. " CATT session(空：No CATT N：CATT without individual screen control A：CATT with individual screen control)
+    GS_BDCPARAMS-DEFSIZE  = 'X'. " 缺省屏幕大小(空：NO X：YES)
+    GS_BDCPARAMS-RACOMMIT = 'X'. " COMMIT 是不完全的(空：NO X：YES)
+    GS_BDCPARAMS-NOBINPT  = 'X'. " 非批输入(空：NO X：YES)
+
+* 清空缓存
+    REFRESH: GT_BDCDATA, GT_BDCMSG.
+  ENDFORM.           "FRM_BDC_INIT
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_BDC_FILL_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->I_FLAG    text
+*      -->I_VAR1    text
+*      -->I_VAR2    text
+*----------------------------------------------------------------------*
+  FORM FRM_BDC_FILL_DATA USING I_FLAG TYPE FLAG
+                                I_VAR1
+                                I_VAR2.
+    DATA: LS_BDCDATA TYPE BDCDATA.
+    IF I_FLAG = 'X'.
+      LS_BDCDATA-DYNBEGIN = 'X'.
+      LS_BDCDATA-PROGRAM  = I_VAR1.
+      LS_BDCDATA-DYNPRO   = I_VAR2.
+    ELSE.
+      LS_BDCDATA-FNAM     = I_VAR1.
+      LS_BDCDATA-FVAL     = I_VAR2.
+    ENDIF.
+    APPEND LS_BDCDATA TO GT_BDCDATA.
+  ENDFORM.           "FRM_BDC_FILL_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_BDC_GET_EMSG
+*&---------------------------------------------------------------------*
+*       BDC 获取异常消息
+*----------------------------------------------------------------------*
+*      -->IT_MSG    text
+*      <--E_MSG     text
+*----------------------------------------------------------------------*
+  FORM FRM_BDC_GET_EMSG  USING    IT_MSG TYPE TAB_BDCMSGCOLL
+                         CHANGING E_MSG  TYPE CLIKE.
+    DATA: LS_MSG TYPE BDCMSGCOLL.
+    DATA: L_MSG TYPE STRING.
+
+    LOOP AT IT_MSG INTO LS_MSG WHERE MSGTYP CA 'EA'.
+      CLEAR L_MSG.
+      MESSAGE ID     LS_MSG-MSGID
+              TYPE   LS_MSG-MSGTYP
+              NUMBER LS_MSG-MSGNR
+         INTO L_MSG
+         WITH LS_MSG-MSGV1 LS_MSG-MSGV2
+              LS_MSG-MSGV3 LS_MSG-MSGV4.
+      CONCATENATE E_MSG L_MSG INTO E_MSG SEPARATED BY SPACE.
+    ENDLOOP.
+
+    IF E_MSG IS INITIAL.
+      E_MSG = '未知错误'.
+    ENDIF.
+  ENDFORM.           "FRM_BDC_FILL_TAB
