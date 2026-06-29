@@ -1,0 +1,42 @@
+*&---------------------------------------------------------------------*
+*& Report YKPD6
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ykpd6.
+
+INCLUDE zbc_incl_bdc .
+
+
+PARAMETERS : p_date TYPE sy-datum .
+
+START-OF-SELECTION .
+
+* BDC初始化
+  PERFORM frm_bdc_init.
+
+* 第 1 屏 初始屏幕
+  PERFORM frm_bdc_fill_data USING :
+    'X'  'SAPLKPP0'          '1000',
+    ' '  'BDC_CURSOR'        'KPP0B-VALUE(09)',
+    ' '  'BDC_OKCODE'        '=CSUB',
+    ' '  'KPP1B-ONLY'        'X' ,
+    ' '  'KPP0B-VALUE(01)'        '2' ,
+    ' '  'KPP0B-VALUE(02)'        '3' ,
+    ' '  'KPP0B-VALUE(03)'        '3' ,
+    ' '  'KPP0B-VALUE(06)'        '001700000039' ,
+    ' '  'KPP0B-VALUE(09)'        '*' .
+
+* 第 2 屏 初始屏幕
+  PERFORM frm_bdc_fill_data USING :
+  'X'  'SAPLKPP2'          '0112',
+  ' '  'BDC_OKCODE'        '=CBUC',
+  ' '  'BDC_CURSOR'        'Z-BDC04(01)',
+  ' '  'Z-BDC01(01)'       'HY0002' ,
+  ' '  'Z-BDC04(01)'       '30' .
+
+* Call BDC
+  CALL TRANSACTION 'KPD6'
+          USING         gt_bdcdata
+          OPTIONS FROM  gs_bdcparams
+          MESSAGES      INTO gt_bdcmsg.
